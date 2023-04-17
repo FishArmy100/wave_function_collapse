@@ -1,3 +1,5 @@
+mod tile_set;
+
 use macroquad::prelude::*;
 
 #[macroquad::main("BasicShapes")]
