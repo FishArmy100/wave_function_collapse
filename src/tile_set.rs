@@ -42,4 +42,9 @@ impl TileSet
     {
         return &mut self.tiles[y * self.width + x]
     }
+
+    pub fn render(&self)
+    {
+        
+    }
 }
