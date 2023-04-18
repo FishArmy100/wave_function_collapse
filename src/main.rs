@@ -1,18 +1,18 @@
 mod tile_set;
-
 use macroquad::prelude::*;
+use tile_set::*;
 
 #[macroquad::main("BasicShapes")]
 async fn main() {
+    let tiles = TileMap::new(20, 20, |x, y| Tile{x, y, id: 0, top_id: None});
+    
+    let offset = Vec3{x: 100.0, y: 100.0, z: 0.0 };
+
+
     loop {
         clear_background(RED);
-
-        draw_line(40.0, 40.0, 100.0, 200.0, 15.0, BLUE);
-        draw_rectangle(screen_width() / 2.0 - 60.0, 100.0, 120.0, 60.0, GREEN);
-        draw_circle(screen_width() - 30.0, screen_height() - 30.0, 15.0, YELLOW);
-
-        draw_text("IT WORKS!", 20.0, 20.0, 30.0, DARKGRAY);
-
+        let mesh = tiles.to_mesh(offset, 10.0);
+        draw_mesh(&mesh);
         next_frame().await
     }
 }
