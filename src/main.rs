@@ -5,7 +5,7 @@ use tile_set::*;
 #[macroquad::main("BasicShapes")]
 async fn main() {
     let house_gen = || {if rand() % 2 == 0 {None} else {Some(uvec2(0, 1))}};
-    let tiles = TileMap::new(10, 10, |x, y| (Some(uvec2(3, 0)), house_gen()));
+    let tiles = TileMap::new(32, 25, &|x, y| (Some(uvec2(3, 0)), house_gen()));
     
     let offset = Vec3{x: 100.0, y: 100.0, z: 0.0 };
     
@@ -13,11 +13,15 @@ async fn main() {
     texture.set_filter(FilterMode::Nearest);
     let tileset = TileSet::new(texture, 7, 44 + 8);
 
-    let mesh = tiles.to_mesh(offset, 20.0, &tileset);
+    let meshes = tiles.to_mesh(offset, 20.0, &tileset);
 
     loop {
         clear_background(RED);
-        draw_mesh(&mesh);
+        for mesh in &meshes
+        {
+            draw_mesh(&mesh);
+        }
+
         next_frame().await
     }
 }
