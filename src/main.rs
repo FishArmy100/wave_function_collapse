@@ -1,10 +1,11 @@
 mod tile_set;
-use macroquad::prelude::*;
+use macroquad::{prelude::*, rand::rand};
 use tile_set::*;
 
 #[macroquad::main("BasicShapes")]
 async fn main() {
-    let tiles = TileMap::new(34, 34, |x, y| (uvec2(6, 0), None));
+    let house_gen = || {if rand() % 2 == 0 {None} else {Some(uvec2(0, 1))}};
+    let tiles = TileMap::new(10, 10, |x, y| (Some(uvec2(3, 0)), house_gen()));
     
     let offset = Vec3{x: 100.0, y: 100.0, z: 0.0 };
     
@@ -12,7 +13,7 @@ async fn main() {
     texture.set_filter(FilterMode::Nearest);
     let tileset = TileSet::new(texture, 7, 44 + 8);
 
-    let mesh = tiles.to_mesh(offset, 10.0, &tileset);
+    let mesh = tiles.to_mesh(offset, 20.0, &tileset);
 
     loop {
         clear_background(RED);
