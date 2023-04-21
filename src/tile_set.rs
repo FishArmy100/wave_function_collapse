@@ -10,6 +10,7 @@ pub struct TileSet
     height: u16
 }
 
+#[derive(Debug, Clone)]
 pub struct Tile
 {
     x: u16,
@@ -23,7 +24,18 @@ pub struct TileMap
 {
     width: usize,
     height: usize,
-    tiles: Vec<Vec<SubMap>>
+    tiles: Vec<Vec<SubMap>>,
+    tile_set: TileSet,
+    sub_maps_x: usize,
+    sub_maps_y: usize,
+}
+
+pub struct TileMapEntity
+{
+    map: TileMap,
+    pub pos: Vec3,
+    size: Vec2,
+    tile_size: f32
 }
 
 struct SubMap
@@ -39,14 +51,14 @@ impl SubMap
 {
     fn new<F: Fn(usize, usize)->(Option<UVec2>, Option<UVec2>)>(width: u16, height: u16, x: usize, y: usize, gen: &F) -> Self
     {
-        let mut tiles = Vec::with_capacity((width * height) as usize);
+        let mut tiles = vec![Tile{x: 0, y: 0, index: 0, base_id: None, top_id: None}; (width * height) as usize];
         for xi in 0..width
         {
             for yi in 0..height
             {
                 let ids = gen(xi as usize + x, yi as usize + y);
                 let index = yi * width + xi;
-                tiles.push(Tile::new(xi as u16, yi as u16, index as u16, ids.0, ids.1));
+                tiles[index as usize] = Tile::new(xi as u16, yi as u16, index as u16, ids.0, ids.1);
             }
         }
 
@@ -56,6 +68,11 @@ impl SubMap
     fn at(&self, x: u16, y: u16) -> &Tile
     {
         return &self.tiles[(y * self.width + x) as usize]
+    }
+
+    fn at_mut(&mut self, x: u16, y: u16) -> &mut Tile
+    {
+        return &mut self.tiles[(y * self.width + x) as usize]
     }
 
     fn to_mesh(&self, offset: Vec3, scale: f32, tileset: &TileSet) -> Mesh
@@ -167,7 +184,7 @@ impl Tile
 
 impl TileMap
 {
-    pub fn new<F: Fn(usize, usize)->(Option<UVec2>, Option<UVec2>)>(width: usize, height: usize, generator: &F) -> Self
+    pub fn new<F: Fn(usize, usize)->(Option<UVec2>, Option<UVec2>)>(width: usize, height: usize, tile_set: TileSet, generator: &F) -> Self
     {
         let sub_maps_x = width / SUB_MAP_MAX_SIZE.x as usize + (if width % SUB_MAP_MAX_SIZE.x as usize != 0 {1} else {0});
         let sub_maps_y = height / SUB_MAP_MAX_SIZE.y as usize + (if height % SUB_MAP_MAX_SIZE.y as usize != 0 {1} else {0});
@@ -212,15 +229,13 @@ impl TileMap
                 {
                     SUB_MAP_MAX_SIZE.y as u16
                 };
-
-                debug!("Generated mesh of size {}x{}", sub_width, sub_height);
                 
                 row.push(SubMap::new(sub_width, sub_height, x * SUB_MAP_MAX_SIZE.x as usize, y * SUB_MAP_MAX_SIZE.y as usize, generator));
             }
             tiles.push(row);
         }
 
-        TileMap { width, height, tiles }
+        TileMap { width, height, tiles, tile_set, sub_maps_x, sub_maps_y}
         
     }
 
@@ -229,29 +244,103 @@ impl TileMap
 
     fn at(&self, x: usize, y: usize) -> &Tile
     {
-        let map_x = x % SUB_MAP_MAX_SIZE.x as usize;
-        let map_y = y % SUB_MAP_MAX_SIZE.y as usize;
-        let map_index_x = (x / SUB_MAP_MAX_SIZE.x as usize) as u16;
-        let map_index_y = (x / SUB_MAP_MAX_SIZE.y as usize) as u16;
+        let map_x = x / SUB_MAP_MAX_SIZE.x as usize;
+        let map_y = y / SUB_MAP_MAX_SIZE.y as usize;
+
+        let tiles = &self.tiles[map_y][map_x];
+
+        let map_index_x = (x % tiles.width as usize) as u16;
+        let map_index_y = (y % tiles.height as usize) as u16;
 
         return &(self.tiles[map_y][map_x].at(map_index_x, map_index_y))
     }
 
-    fn mut_at(&mut self, x: usize, y: usize) -> &Tile
+    fn at_mut(&mut self, x: usize, y: usize) -> &mut Tile
     {
-        let map_x = x % SUB_MAP_MAX_SIZE.x as usize;
-        let map_y = y % SUB_MAP_MAX_SIZE.y as usize;
-        let map_index_x = (x / SUB_MAP_MAX_SIZE.x as usize) as u16;
-        let map_index_y = (x / SUB_MAP_MAX_SIZE.y as usize) as u16;
+        let mut map_x = x / SUB_MAP_MAX_SIZE.x as usize;
+        let mut map_y = y / SUB_MAP_MAX_SIZE.y as usize;
+        
+        if map_x >= self.sub_maps_x {map_x = self.sub_maps_x - 1}
+        if map_y >= self.sub_maps_y {map_y = self.sub_maps_y - 1}
 
-        return &mut (self.tiles[map_y][map_x].at(map_index_x, map_index_y))
+        let tiles = &self.tiles[map_y][map_x];
+
+        let map_index_x = (x % tiles.width as usize) as u16;
+        let map_index_y = (y % tiles.height as usize) as u16;
+
+        return self.tiles[map_y][map_x].at_mut(map_index_x, map_index_y)
     }
     
-    pub fn to_mesh(&self, offset: Vec3, scale: f32, tileset: &TileSet) -> Vec<Mesh>
+    pub fn to_mesh(&self, offset: Vec3, scale: f32) -> Vec<Mesh>
     {
         self.tiles.iter()
                   .flatten()
-                  .map(|m| m.to_mesh(offset, scale, tileset))
+                  .map(|m| m.to_mesh(offset, scale, &self.tile_set))
                   .collect()
+    }
+}
+
+impl TileMapEntity
+{
+    pub fn new<F: Fn(usize, usize)->(Option<UVec2>, Option<UVec2>)>(pos: Vec3, width: usize, height: usize, tile_size: f32, tile_set: TileSet, generator: &F) -> Self
+    {
+        Self 
+        { 
+            map: TileMap::new(width, height, tile_set, generator), 
+            pos, 
+            size: Vec2 { x: width as f32, y: height as f32 } * tile_size,
+            tile_size
+        }
+    }
+
+    pub fn tile_map(&self) -> &TileMap
+    {
+        &self.map
+    }
+
+    pub fn tile_size(&self) -> f32
+    {
+        self.tile_size
+    }
+
+    pub fn size(&self) -> Vec2
+    {
+        self.size
+    }
+
+    pub fn tile_count(&self) -> (usize, usize)
+    {
+        (self.map.width, self.map.height)
+    }
+
+    pub fn at_pos(&self, pos: Vec2) -> Option<&Tile>
+    {
+        if pos.x < self.pos.x || pos.x > self.pos.x + self.size.x ||
+           pos.y < self.pos.y || pos.y > self.pos.y + self.size.y
+        {
+            return None;
+        }
+
+        let relative = pos - self.pos.truncate();
+        let grid_pos = (relative / self.tile_size).floor().as_uvec2();
+        Some(self.map.at(grid_pos.x as usize, grid_pos.y as usize))
+    }
+
+    pub fn at_pos_mut(&mut self, pos: Vec2) -> Option<&mut Tile>
+    {
+        if pos.x < self.pos.x || pos.x > self.pos.x + self.size.x ||
+           pos.y < self.pos.y || pos.y > self.pos.y + self.size.y
+        {
+            return None;
+        }
+
+        let relative = pos - self.pos.truncate();
+        let grid_pos = (relative / self.tile_size).floor().as_uvec2();
+        Some(self.map.at_mut(grid_pos.x as usize, grid_pos.y as usize))
+    }
+
+    pub fn get_mesh(&self) -> Vec<Mesh>
+    {
+        self.map.to_mesh(self.pos, self.tile_size)
     }
 }
