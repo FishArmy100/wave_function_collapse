@@ -31,12 +31,11 @@ async fn get_tilemap() -> TileMapEntity
 
 fn test_wfc()
 {
-    let mut array = Array2D::<u32>::new_default(5, 5);
+    let mut array = Array2D::<u32>::new_default(6, 5);
 
     *array.at_mut(2, 2) = 1;
-    let pattern = Pattern::from_grid(ArrayPos::new(2, 2), 2, &array);
-
-    println!("{:#?}", pattern.unwrap().data().at(1, 1));
+    println!("{}", array);
+    let patterns = Pattern::get_patterns(&array, 2);
 }
 
 #[macroquad::main("BasicShapes")]

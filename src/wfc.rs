@@ -1,10 +1,10 @@
-use std::{hash::Hash, collections::HashSet};
+use std::{hash::Hash, collections::HashSet, fmt};
 
 use crate::utils::{Array2D, ArrayPos};
 
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub struct Pattern<T> where T : Clone + Eq
+pub struct Pattern<T>
 {
     radius: usize,
     tiles: Array2D<T>
@@ -14,6 +14,13 @@ fn is_in_grid<T>(pos: ArrayPos, radius: usize, grid: &Array2D<T>) -> bool
     where T : Clone + PartialEq
 {
     pos.x >= radius - 1 && pos.y >= radius - 1 && pos.x + radius - 1 < grid.width() && pos.y + radius - 1 < grid.height()
+}
+
+impl<T> fmt::Display for Pattern<T> where T : fmt::Display + Clone + Eq
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.tiles)
+    }
 }
 
 impl<T> Pattern<T> where T : Clone + Eq + Hash
@@ -58,6 +65,7 @@ impl<T> Pattern<T> where T : Clone + Eq + Hash
 
         let set : HashSet<_> = patterns.drain(..).collect();
         patterns.extend(set.into_iter());
+
         patterns
     }
 
