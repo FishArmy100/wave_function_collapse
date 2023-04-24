@@ -6,5 +6,8 @@
 - [Fantasy Tileset](https://winlu.itch.io/winlu-fantasy-tileset-exterior)
     - **Note:** This has not been used, is here for later use
 
+## Sources:
+- [WFC vs Model Synthesis](https://www.youtube.com/watch?v=zIRTOgfsjl0)
+
 ## Dependencies:
 - [Macroquad](https://docs.rs/macroquad/latest/macroquad/index.html)
