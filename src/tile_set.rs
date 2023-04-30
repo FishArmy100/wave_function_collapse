@@ -1,43 +1,11 @@
+use core::fmt;
+
 use macroquad::prelude::*;
 use macroquad::models::{Vertex, Mesh};
 
 const SUB_MAP_MAX_SIZE: UVec2 = UVec2{x: 10, y: 10};
 
-pub struct TileSet
-{
-    texture: Texture2D,
-    width: u16,
-    height: u16
-}
-
 #[derive(Debug, Clone)]
-pub struct Tile
-{
-    x: u16,
-    y: u16,
-    index: u16,
-    pub base_id: Option<UVec2>,
-    pub top_id: Option<UVec2>,
-}
-
-pub struct TileMap
-{
-    width: usize,
-    height: usize,
-    tiles: Vec<Vec<SubMap>>,
-    tile_set: TileSet,
-    sub_maps_x: usize,
-    sub_maps_y: usize,
-}
-
-pub struct TileMapEntity
-{
-    map: TileMap,
-    pub pos: Vec3,
-    size: Vec2,
-    tile_size: f32
-}
-
 struct SubMap
 {
     width: u16,
@@ -104,6 +72,14 @@ impl SubMap
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct TileSet
+{
+    texture: Texture2D,
+    width: u16,
+    height: u16
+}
+
 impl TileSet
 {
     pub fn new(texture: Texture2D, width: u16, height: u16) -> Self
@@ -114,6 +90,16 @@ impl TileSet
     pub fn width(&self) -> u16 {self.width}
     pub fn height(&self) -> u16 {self.height}
     pub fn texture(&self) -> Texture2D {self.texture}
+}
+
+#[derive(Debug, Clone)]
+pub struct Tile
+{
+    x: u16,
+    y: u16,
+    index: u16,
+    pub base_id: Option<UVec2>,
+    pub top_id: Option<UVec2>,
 }
 
 impl Tile
@@ -180,6 +166,17 @@ impl Tile
 
         None
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct TileMap
+{
+    width: usize,
+    height: usize,
+    tiles: Vec<Vec<SubMap>>,
+    tile_set: TileSet,
+    sub_maps_x: usize,
+    sub_maps_y: usize,
 }
 
 impl TileMap
@@ -280,16 +277,41 @@ impl TileMap
     }
 }
 
+#[derive(Clone)]
+pub struct TileMapEntity
+{
+    pub pos: Vec3,
+    pub tile_size: f32,
+    map: TileMap,
+    size: Vec2,
+    meshes: Vec<Mesh>
+}
+
+impl fmt::Debug for TileMapEntity
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TileMapEntity")
+            .field("pos", &self.pos)
+            .field("tile_size", &self.tile_size)
+            .field("map", &self.map)
+            .field("size", &self.size)
+            .finish_non_exhaustive()
+    }
+}
+
 impl TileMapEntity
 {
     pub fn new<F: Fn(usize, usize)->(Option<UVec2>, Option<UVec2>)>(pos: Vec3, width: usize, height: usize, tile_size: f32, tile_set: TileSet, generator: &F) -> Self
     {
+        let map = TileMap::new(width, height, tile_set, generator);
+        let meshes = map.to_mesh(pos, tile_size);
         Self 
         { 
-            map: TileMap::new(width, height, tile_set, generator), 
+            map: , 
             pos, 
             size: Vec2 { x: width as f32, y: height as f32 } * tile_size,
-            tile_size
+            tile_size,
+            meshes: map
         }
     }
 
@@ -337,10 +359,5 @@ impl TileMapEntity
         let relative = pos - self.pos.truncate();
         let grid_pos = (relative / self.tile_size).floor().as_uvec2();
         Some(self.map.at_mut(grid_pos.x as usize, grid_pos.y as usize))
-    }
-
-    pub fn get_mesh(&self) -> Vec<Mesh>
-    {
-        self.map.to_mesh(self.pos, self.tile_size)
     }
 }

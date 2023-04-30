@@ -1,67 +1,59 @@
 mod tile_set;
 mod utils;
 mod wfc;
-
-use macroquad::{prelude::*, rand::rand};
+mod wfc_renderer;
+use macroquad::prelude::*;
 use tile_set::*;
 use utils::Array2D;
-use wfc::{Pattern};
+use wfc_renderer::*;
 
-use crate::utils::ArrayPos;
-
-async fn get_tilemap() -> TileMapEntity
+async fn get_wfc_entity() -> WFCEntity
 {
     let texture = load_texture("C:\\dev\\Rust\\wave_function_collapse\\resources\\medieval_pixel_art_tileset\\TileSet.png").await.unwrap();
     texture.set_filter(FilterMode::Nearest);
     let tileset = TileSet::new(texture, 7, 44 + 8);
 
-    let house_gen = || {if rand() % 2 == 0 {Some(uvec2(0, 1))} else {None}};
-    let mut map_entity = TileMapEntity::new(Vec3::ZERO, 50, 50, 10.0, tileset, &|x, y| (Some(uvec2(3, 0)), None));
+    let tiles_x = 10;
+    let tiles_y = 10;
+    
+
+    let mut model = Array2D::<TileData>::new(5, 5, vec![TileData::new(Some(uvec2(3, 0)), None); 5 * 5]);
+    *model.at_mut(2, 2) = TileData::new(Some(uvec2(3, 0)), Some(uvec2(0, 1)));
+
+    WFCEntity::new(&model, 2, tileset, tiles_x, tiles_y, 0329875029875)
+}
+
+fn render_wfc_entity(entity: &WFCEntity) -> Vec<Mesh>
+{
+    let tile_size = 30.0;
 
     let screen_center = Vec2{x: screen_width() / 2.0, y: screen_height() / 2.0};
     let map_pos = Vec2
     {
-        x: screen_center.x - (map_entity.size().x / 2.0),
-        y: screen_center.y - (map_entity.size().y  / 2.0)
+        x: screen_center.x - (entity.width() as f32 * tile_size / 2.0),
+        y: screen_center.y - (entity.height() as f32 * tile_size  / 2.0)
     };
 
-    map_entity.pos = map_pos.extend(0.0);
-    return map_entity
-}
-
-fn test_wfc()
-{
-    let mut array = Array2D::<u32>::new_default(6, 5);
-
-    *array.at_mut(2, 2) = 1;
-    println!("{}", array);
-    let patterns = Pattern::get_patterns(&array, 2);
+    entity.get_mesh(map_pos.extend(0.0), tile_size)
 }
 
 #[macroquad::main("BasicShapes")]
 async fn main() {
-    let mut map = get_tilemap().await;
-    let mut meshes = map.get_mesh();
-
     let camera = &mut Camera2D::from_display_rect(Rect { x: 0.0, y: 0.0, w: screen_width(), h: screen_height() });
     set_camera(camera);
 
-    test_wfc();
+    let mut entity = get_wfc_entity().await;
+    let mut meshes = render_wfc_entity(&entity);
 
     loop {
-        if is_mouse_button_down(MouseButton::Left)
+        clear_background(BLUE);
+
+        if is_key_pressed(KeyCode::Space)
         {
-            let local_pos = mouse_position();
-            let pos = camera.screen_to_world(Vec2{x: local_pos.0, y: local_pos.1});
-            //debug!("Mouse position: ({}, {})", pos.x, pos.y);
-            if let Some(tile) = map.at_pos_mut(pos)
-            {
-                tile.top_id = Some(uvec2(0, 1));
-                meshes = map.get_mesh(); // need to regenerate the mesh
-            }
+            entity.step();
+            meshes = render_wfc_entity(&entity);
         }
 
-        clear_background(BLUE);
         for mesh in &meshes
         {
             draw_mesh(&mesh);

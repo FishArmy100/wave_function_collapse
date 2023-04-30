@@ -1,4 +1,5 @@
 use std::{ops::Add, fmt};
+use macroquad::prelude::*;
 
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -87,6 +88,45 @@ impl<T> fmt::Display for Array2D<T> where T : fmt::Display
     }
 }
 
+pub struct Array2DIter<'a, T>
+{
+    x: usize,
+    y: usize,
+    array: &'a Array2D<T>
+}
+
+impl<'a, T> IntoIterator for &'a Array2D<T> where T : Clone
+{
+    type Item = (ArrayPos, T);
+
+    type IntoIter = Array2DIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter{x: 0, y: 0, array: &self}
+    }
+}
+
+impl<'a, T> Iterator for Array2DIter<'a, T> where T: Clone
+{
+    type Item = (ArrayPos, T);
+    fn next(&mut self) -> Option<Self::Item> {
+        
+        let next = if self.y >= self.array.height
+        {
+            None
+        }
+        else 
+        {
+            Some((ArrayPos{x: self.x, y: self.y}, self.array.at(self.x, self.y).clone()))
+        };
+        
+        self.x += 1;
+        if self.x >= self.array.width {self.y += 1; self.x = 0;}
+
+        next
+    }
+}
+
 #[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 pub struct ArrayPos
 {
@@ -114,5 +154,29 @@ impl fmt::Display for ArrayPos
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
+pub struct SliceDisplay<'a, T: 'a>(pub &'a [T]);
+
+impl<'a, T: fmt::Display + 'a> fmt::Display for SliceDisplay<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut first = true;
+        for item in self.0 {
+            if !first {
+                write!(f, ",\n{}", item)?;
+            } else {
+                write!(f, "{}", item)?;
+            }
+            first = false;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for Mesh
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Mesh").field("vertices", &self.vertices).field("indices", &self.indices).field("texture", &self.texture).finish()
     }
 }
