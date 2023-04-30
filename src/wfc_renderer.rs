@@ -10,49 +10,17 @@ use crate::utils::SliceDisplay;
 use crate::wfc::*;
 use crate::tile_set::*;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-pub struct TileData
-{
-    pub top: Option<UVec2>,
-    pub base: Option<UVec2>
-}
-
-impl fmt::Display for TileData
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}; {}]", 
-            match self.top 
-            {
-                Some(v) => format!("({}, {})", v.x, v.y),
-                None => String::from("()")
-            },
-            match self.base 
-            {
-                Some(v) => format!("({}, {})", v.x, v.y),
-                None => String::from("()")
-            })
-    }
-}
-
-impl TileData
-{
-    pub fn new(top: Option<UVec2>, base: Option<UVec2>) -> TileData
-    {
-        TileData { top, base }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct WFCEntity
 {
     tiles: Vec<TileData>,
-    tile_set: TileSet,
-    wave: Wave<TileData>
+    wave: Wave<TileData>,
+    entity: TileMapEntity
 }
 
 impl WFCEntity
 {
-    pub fn new(model: &Array2D<TileData>, pattern_radius: usize, tile_set: TileSet, width: usize, height: usize, seed: u64) -> Self
+    pub fn new(model: &Array2D<TileData>, pattern_radius: usize, tile_set: TileSet, pos: Vec3, tile_size: f32, width: usize, height: usize, seed: u64) -> Self
     {
         let tiles_hash: HashSet<TileData, BuildHasherDefault<DefaultHasher>> = model.clone()
             .into_iter()
@@ -67,24 +35,46 @@ impl WFCEntity
         println!("{}", SliceDisplay(&debug_patterns));
 
         let wave: Wave<TileData> = Wave::new(patterns, width, height, seed);
-        WFCEntity { tiles, tile_set, wave }
+        let entity = TileMapEntity::new(pos, width, height, tile_size, tile_set, &|_, _| TileData::default());
+        WFCEntity { tiles, wave, entity }
     }
 
-    pub fn step(&mut self) { self.wave.step() }
+    pub fn step(&mut self, step_count: usize) 
+    { 
+        for _ in 0..step_count
+        {
+            self.wave.step();
+        }
 
-    pub fn get_mesh(&self, pos: Vec3, tile_size: f32) -> Vec<Mesh>
+        self.update_visual();
+    }
+
+    fn update_visual(&mut self)
     {
-        let grid = &self.wave.grid();
-        TileMapEntity::new(pos, grid.width(), grid.height(), tile_size, self.tile_set.clone(), &|x, y| {
-            match grid.at(x, y)
+        for x in 0..self.width()
+        {
+            for y in 0..self.height()
             {
-                WaveTile::Collapsed(tile) => (tile.top, tile.base),
-                WaveTile::SuperPos(_) => (None, None),
-                WaveTile::Undefined => (None, None),
+                let data = match self.wave.grid().at(x, y)
+                {
+                    WaveTile::Collapsed(tile) => TileData::new(tile.top, tile.base),
+                    WaveTile::SuperPos(_) => TileData::default(),
+                    WaveTile::Undefined => TileData::default(),
+                };
+
+                self.entity.set_without_update(x, y, data);
             }
-        }).get_mesh()
+        }
+
+        self.entity.update();
+    }
+
+    pub fn render(&self)
+    {
+        self.entity.render();
     }
 
     pub fn width(&self) -> usize {self.wave.grid().width()}
     pub fn height(&self) -> usize {self.wave.grid().height()}
+    pub fn tile_set(&self) -> &TileSet {self.entity.tile_map().tile_set()}
 }

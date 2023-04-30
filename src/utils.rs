@@ -173,10 +173,3 @@ impl<'a, T: fmt::Display + 'a> fmt::Display for SliceDisplay<'a, T> {
         Ok(())
     }
 }
-
-impl fmt::Debug for Mesh
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Mesh").field("vertices", &self.vertices).field("indices", &self.indices).field("texture", &self.texture).finish()
-    }
-}
