@@ -44,7 +44,7 @@ impl<T> Pattern<T> where T : Clone + Eq + Hash
 
             Some(Self {radius, tiles: Array2D::<T>::new(pattern_size, pattern_size, data)})
         }
-        else 
+        else
         {
             None
         }
@@ -107,6 +107,7 @@ impl<T> WaveTile<T>
 #[derive(Clone, Debug)]
 pub struct Wave<T> where T : Clone
 {
+    pattern_radius: usize,
     patterns: Vec<Pattern<T>>,
     wave: Array2D<WaveTile<T>>,
     rng: StdRng
@@ -116,20 +117,27 @@ impl<T> Wave<T> where T : Eq + Hash + Clone
 {
     pub fn grid(&self) -> &Array2D<WaveTile<T>> {&self.wave}
 
-    pub fn new(patterns: Vec<Pattern<T>>, width: usize, height: usize, seed: u64) -> Self
+    pub fn new(model: &Array2D<T>, pattern_radius: usize, width: usize, height: usize, seed: u64) -> Self
     {
+        let patterns = Pattern::get_patterns(model, pattern_radius);
         let wave_tiles = WaveTile::SuperPos((0..patterns.len()).collect());
         let wave = Array2D::<WaveTile<T>>::new(width, height, vec![wave_tiles; width * height]);
         let rng = StdRng::seed_from_u64(seed);
-        Wave { patterns, wave, rng}
+        Wave { patterns, wave, rng, pattern_radius }
     }
 
     pub fn collapse(&mut self, pos: ArrayPos)
     {
         let collapsed = if let WaveTile::SuperPos(possibilities) = self.wave.at_mut(pos.x, pos.y)
         {
-            let index = self.rng.gen_range(0..possibilities.len());
-            //println!("{}", index);
+            if possibilities.len() == 0
+            {
+                *self.wave.at_mut(pos.x, pos.y) = WaveTile::<T>::Undefined;
+                return;
+            }
+
+            let index = if possibilities.len() == 1 { 0 } else { self.rng.gen_range(0..possibilities.len()) };
+            //dbg!("{}", index);
             possibilities[index]
         }
         else 
@@ -142,37 +150,42 @@ impl<T> Wave<T> where T : Eq + Hash + Clone
 
     pub fn propagate(&mut self, pos: ArrayPos)
     {
-        if let WaveTile::SuperPos(possibilities) = self.wave.at_mut(pos.x, pos.y)
+        for neighbor_pos in self.wave.get_neighbors(pos, self.pattern_radius)
         {
-            let copy = possibilities.clone();
-            // you could explicitly `drop(possibilities)` here for clarity, but it doesnt really matter
-            for pattern_index in copy
+            if let WaveTile::SuperPos(possibilities) = self.wave.at_mut(neighbor_pos.x, neighbor_pos.y)
             {
-                if !self.check_pattern(pos, &self.patterns[pattern_index]) // this says it has already been borrowed mutably
+                let copy = possibilities.clone();
+                // you could explicitly `drop(possibilities)` here for clarity, but it doesnt really matter
+                for pattern_index in copy
                 {
-                    let WaveTile::SuperPos(possibilities) = self.wave.at_mut(pos.x, pos.y) else {unreachable!()}; // borrow possibilities again here
-                    possibilities.retain(|&p| p != pattern_index)
+                    if !self.check_pattern(pos, &self.patterns[pattern_index]) // this says it has already been borrowed mutably
+                    {
+                        let WaveTile::SuperPos(possibilities) = self.wave.at_mut(neighbor_pos.x, neighbor_pos.y) else {unreachable!()}; // borrow possibilities again here
+                        possibilities.retain(|&p| p != pattern_index)
+                    }
                 }
             }
         }
+
+        
     }
 
     pub fn check_pattern(&self, pos: ArrayPos, pattern: &Pattern<T>) -> bool
     {
-        for x in 0..pattern.radius * 2
+        for x in 0..pattern.radius * 2 - 1
         {
-            for y in 0..pattern.radius * 2
+            for y in 0..pattern.radius * 2 - 1
             {
                 let x = x as isize;
                 let y = y as isize;
 
-                let wave_x = x - pattern.radius as isize + 1 + pos.x as isize;
-                let wave_y = y - pattern.radius as isize + 1 + pos.y as isize;
+                let wave_x = x - pattern.radius as isize + pos.x as isize + 1;
+                let wave_y = y - pattern.radius as isize + pos.y as isize + 1;
 
-                if !self.is_in_wave(x, y) {continue;}
+                if !self.is_in_wave(wave_x, wave_y) {continue;}
 
                 let pattern_tile = pattern.tiles.at(x as usize, y as usize);
-                let wave_tile = self.wave.at((wave_x + x) as usize, (wave_y + y) as usize);
+                let wave_tile = self.wave.at(wave_x as usize, wave_y as usize);
 
                 let matchable = match wave_tile
                 {
@@ -216,6 +229,15 @@ impl<T> Wave<T> where T : Eq + Hash + Clone
     pub fn step(&mut self)
     {
         if let Some(tile) = self.observe()
+        {
+            self.collapse(tile);
+            self.propagate(tile);
+        }
+    }
+
+    pub fn collapse_full(&mut self)
+    {
+        while let Some(tile) = self.observe()
         {
             self.collapse(tile);
             self.propagate(tile);

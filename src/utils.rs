@@ -30,6 +30,93 @@ impl<T> Array2D<T>
 
     pub fn width(&self) -> usize {self.width}
     pub fn height(&self) -> usize {self.height}
+
+    pub fn get_neighbors(&self, pos: ArrayPos, radius: usize) -> NeighborPositionIterator
+    {
+        NeighborPositionIterator::new(radius, self.width, self.height, pos)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct NeighborPositionIterator
+{
+    x: isize,
+    y: isize,
+    radius: usize,
+    array_width: usize,
+    array_height: usize,
+    start_pos: ArrayPos
+}
+
+impl NeighborPositionIterator
+{
+    pub fn new(radius: usize, width: usize, height: usize, start_pos: ArrayPos) -> Self
+    {
+        Self 
+        { 
+            x: (start_pos.x as isize - radius as isize + 1), 
+            y: (start_pos.y as isize - radius as isize + 1),
+            radius, 
+            array_width: 
+            width, 
+            array_height: height, 
+            start_pos 
+        }
+    }
+
+    fn is_in_array(&self) -> bool
+    {
+        !(  self.x < 0 || self.x >= self.array_width as isize || 
+            self.y < 0 || self.y >= self.array_height as isize)
+    }
+
+    fn increment(&mut self)
+    {
+        self.x += 1;
+        if self.x > (self.start_pos.x + self.radius - 1) as isize
+        {
+            self.x = self.start_pos.x as isize - self.radius as isize + 1;
+            self.y += 1;
+        }
+    }
+
+    fn is_at_end(&self) -> bool
+    {
+        self.y > (self.start_pos.y as isize + self.radius as isize - 1)
+    }
+}
+
+impl Iterator for NeighborPositionIterator
+{
+    type Item = ArrayPos;
+
+    fn next(&mut self) -> Option<Self::Item> 
+    {
+        while !self.is_in_array() && !self.is_at_end()
+        {
+            self.increment();
+        }
+
+        if self.start_pos.x as isize == self.x && self.start_pos.y as isize == self.y
+        {
+            self.increment();
+            while !self.is_in_array() && !self.is_at_end()
+            {
+                self.increment();
+            }
+        }
+
+        if self.is_at_end() 
+        {
+            None
+        }
+        else 
+        {
+            let pos = ArrayPos::new(self.x as usize, self.y as usize);
+            self.increment();
+            Some(pos)
+        }
+    }
 }
 
 
