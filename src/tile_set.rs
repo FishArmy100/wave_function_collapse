@@ -4,6 +4,8 @@ use itertools::Itertools;
 use macroquad::prelude::*;
 use macroquad::models::{Vertex, Mesh};
 
+use crate::utils::Array2D;
+
 const SUB_MAP_MAX_SIZE: UVec2 = UVec2{x: 10, y: 10};
 
 #[derive(Debug, Clone)]
@@ -357,6 +359,11 @@ impl TileMapEntity
         let map = TileMap::new(width, height, tile_set, generator);
         let meshes = map.to_mesh(pos, tile_size);
         Self { pos, tile_size, map, meshes }
+    }
+
+    pub fn from_array2d(base: &Array2D<TileData>, tile_set: TileSet, pos: Vec3, tile_size: f32) -> Self
+    {
+        Self::new(pos, base.width(), base.height(), tile_size, tile_set, &|x, y| base.at(x, y).clone())
     }
 
     pub fn tile_map(&self) -> &TileMap

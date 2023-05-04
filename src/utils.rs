@@ -182,9 +182,9 @@ pub struct Array2DIter<'a, T>
     array: &'a Array2D<T>
 }
 
-impl<'a, T> IntoIterator for &'a Array2D<T> where T : Clone
+impl<'a, T> IntoIterator for &'a Array2D<T>
 {
-    type Item = (ArrayPos, T);
+    type Item = (ArrayPos, &'a T);
 
     type IntoIter = Array2DIter<'a, T>;
 
@@ -193,9 +193,9 @@ impl<'a, T> IntoIterator for &'a Array2D<T> where T : Clone
     }
 }
 
-impl<'a, T> Iterator for Array2DIter<'a, T> where T: Clone
+impl<'a, T> Iterator for Array2DIter<'a, T>
 {
-    type Item = (ArrayPos, T);
+    type Item = (ArrayPos, &'a T);
     fn next(&mut self) -> Option<Self::Item> {
         
         let next = if self.y >= self.array.height
@@ -204,7 +204,7 @@ impl<'a, T> Iterator for Array2DIter<'a, T> where T: Clone
         }
         else 
         {
-            Some((ArrayPos{x: self.x, y: self.y}, self.array.at(self.x, self.y).clone()))
+            Some((ArrayPos{x: self.x, y: self.y}, self.array.at(self.x, self.y)))
         };
         
         self.x += 1;

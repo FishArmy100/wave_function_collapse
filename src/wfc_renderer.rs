@@ -13,6 +13,8 @@ pub struct WFCEntity
 
 impl WFCEntity
 {
+    pub fn patterns(&self) -> &Vec<Pattern<TileData>> {self.wave.patterns()}
+
     pub fn new(model: &Array2D<TileData>, pattern_radius: usize, tile_set: TileSet, pos: Vec3, tile_size: f32, width: usize, height: usize, seed: u64, error_tile: TileData) -> Self
     {
         let wave: Wave<TileData> = Wave::new(model, pattern_radius, width, height, seed);
@@ -21,7 +23,7 @@ impl WFCEntity
     }
 
     pub fn step(&mut self, step_count: usize) 
-    { 
+    {
         for _ in 0..step_count
         {
             self.wave.step();

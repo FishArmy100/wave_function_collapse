@@ -1,7 +1,9 @@
-use std::{hash::{Hash, BuildHasherDefault}, collections::{HashSet, hash_map::DefaultHasher}, fmt::{self, Debug}};
+use std::{hash::{Hash, BuildHasherDefault}, collections::{HashSet, hash_map::DefaultHasher, HashMap}, fmt::{self, Debug, format}, iter::Map};
 use itertools::Itertools;
 use rand::prelude::*;
+use crate::tile_set::TileData;
 use crate::utils::{Array2D, ArrayPos};
+use macroquad::prelude::{uvec2};
 
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -21,6 +23,57 @@ impl<T> fmt::Display for Pattern<T> where T : fmt::Display + Clone + Eq
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.tiles)
+    }
+}
+
+impl<T> Pattern<T> where T : Eq + Hash + PartialEq
+{
+    pub fn pretty_print(&self, feilds: &HashMap<T, String>, default_pattern_text: String) -> String
+    {
+        let max_len = match feilds.values().map(|s| s.len()).max_by(|x, y| x.cmp(y))
+        {
+            Some(len) => len,
+            None => 1
+        };
+
+        let max_len = max_len.max(default_pattern_text.len());
+        let mut str = String::with_capacity((max_len + 3) * self.tiles.width() * self.tiles.height());
+        for y in 0..self.tiles.height()
+        {
+            for x in 0.. self.tiles.width()
+            {
+                let text = feilds.get(self.tiles.at(x, y));
+                match text
+                {
+                    Some(tile_text) =>
+                    {
+                        let text_len = tile_text.len();
+                        let prefix_space_len = (max_len - text_len) / 2;
+                        str += "[";
+                        str += &String::from(" ").repeat(prefix_space_len);
+                        str += &tile_text;
+                        let postfix_space_len = max_len - prefix_space_len - text_len;
+                        str += &String::from(" ").repeat(postfix_space_len);
+                        str += "]";
+                    },
+                    None =>
+                    {
+                        let text_len = default_pattern_text.len();
+                        let prefix_space_len = (max_len - text_len) / 2;
+                        str += "[";
+                        str += &String::from(" ").repeat(prefix_space_len);
+                        str += &default_pattern_text;
+                        let postfix_space_len = max_len - prefix_space_len - text_len;
+                        str += &String::from(" ").repeat(postfix_space_len);
+                        str += "]";
+                    }
+                }
+            }
+
+            str += "\n";
+        }
+
+        str
     }
 }
 
@@ -113,9 +166,10 @@ pub struct Wave<T> where T : Clone
     rng: StdRng
 }
 
-impl<T> Wave<T> where T : Eq + Hash + Clone
+impl<T> Wave<T> where T : Eq + Hash + Clone + fmt::Display
 {
     pub fn grid(&self) -> &Array2D<WaveTile<T>> {&self.wave}
+    pub fn patterns(&self) -> &Vec<Pattern<T>> {&self.patterns}
 
     pub fn new(model: &Array2D<T>, pattern_radius: usize, width: usize, height: usize, seed: u64) -> Self
     {
@@ -123,6 +177,7 @@ impl<T> Wave<T> where T : Eq + Hash + Clone
         let wave_tiles = WaveTile::SuperPos((0..patterns.len()).collect());
         let wave = Array2D::<WaveTile<T>>::new(width, height, vec![wave_tiles; width * height]);
         let rng = StdRng::seed_from_u64(seed);
+
         Wave { patterns, wave, rng, pattern_radius }
     }
 
@@ -158,7 +213,8 @@ impl<T> Wave<T> where T : Eq + Hash + Clone
                 // you could explicitly `drop(possibilities)` here for clarity, but it doesnt really matter
                 for pattern_index in copy
                 {
-                    if !self.check_pattern(pos, &self.patterns[pattern_index]) // this says it has already been borrowed mutably
+                    let viable_pattern = self.check_pattern(neighbor_pos, &self.patterns[pattern_index]);
+                    if !viable_pattern // this says it has already been borrowed mutably
                     {
                         let WaveTile::SuperPos(possibilities) = self.wave.at_mut(neighbor_pos.x, neighbor_pos.y) else {unreachable!()}; // borrow possibilities again here
                         possibilities.retain(|&p| p != pattern_index)
