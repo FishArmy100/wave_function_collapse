@@ -6,19 +6,20 @@ use crate::tile_set::*;
 #[derive(Clone, Debug)]
 pub struct WFCEntity
 {
-    wave: Wave<TileData>,
+    wave: Wave<usize>,
     entity: TileMapEntity,
-    error_tile: TileData
+    error_tile: Option<usize>
 }
 
 impl WFCEntity
 {
-    pub fn patterns(&self) -> &Vec<Pattern<TileData>> {self.wave.patterns()}
+    pub fn patterns(&self) -> &Vec<Pattern<usize>> {self.wave.patterns()}
+    pub fn tiles(&self) -> &Vec<TileData> {self.entity.tile_map().tiles()}
 
-    pub fn new(model: &Array2D<TileData>, pattern_radius: usize, tile_set: TileSet, pos: Vec3, tile_size: f32, width: usize, height: usize, seed: u64, error_tile: TileData) -> Self
+    pub fn new(tiles: Vec<TileData>, model: &Array2D<usize>, pattern_radius: usize, tile_set: TileSet, pos: Vec3, tile_size: f32, width: usize, height: usize, seed: u64, error_tile: Option<usize>) -> Self
     {
-        let wave: Wave<TileData> = Wave::new(model, pattern_radius, width, height, seed);
-        let entity = TileMapEntity::new(pos, width, height, tile_size, tile_set, &|_, _| TileData::default());
+        let wave = Wave::new(model, pattern_radius, width, height, seed);
+        let entity = TileMapEntity::new(pos, width, height, tile_size, tile_set, tiles, &|_, _| None);
         WFCEntity { wave, entity, error_tile }
     }
 
@@ -46,8 +47,8 @@ impl WFCEntity
             {
                 let data = match self.wave.grid().at(x, y)
                 {
-                    WaveTile::Collapsed(tile) => TileData::new(tile.top, tile.base),
-                    WaveTile::SuperPos(_) => TileData::default(),
+                    WaveTile::Collapsed(tile) => Some(*tile),
+                    WaveTile::SuperPos(_) => None,
                     WaveTile::Undefined => self.error_tile,
                 };
 

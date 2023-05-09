@@ -1,9 +1,7 @@
 use std::{hash::{Hash, BuildHasherDefault}, collections::{HashSet, hash_map::DefaultHasher, HashMap}, fmt::{self, Debug, format}, iter::Map};
 use itertools::Itertools;
 use rand::prelude::*;
-use crate::tile_set::TileData;
 use crate::utils::{Array2D, ArrayPos};
-use macroquad::prelude::{uvec2};
 
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]

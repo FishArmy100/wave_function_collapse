@@ -2,14 +2,17 @@ mod tile_set;
 mod utils;
 mod wfc;
 mod wfc_renderer;
+mod file_system;
+mod tile_map_editor;
 
-use itertools::Itertools;
 use macroquad::prelude::*;
+use macroquad::ui::*;
+use tile_map_editor::TileMapEditor;
 use tile_set::*;
 use utils::*;
 use wfc_renderer::*;
 
-async fn get_wfc_entity(model: &Array2D<TileData>) -> WFCEntity
+async fn get_wfc_entity(tiles: &Vec<TileData>, model: &Array2D<usize>, error_tile: Option<usize>) -> WFCEntity
 {
     let tileset = get_tile_set().await;
 
@@ -20,9 +23,7 @@ async fn get_wfc_entity(model: &Array2D<TileData>) -> WFCEntity
 
     let map_pos = get_map_pos(tiles_x, tiles_y, tile_size);
 
-    let error_tile = TileData::new(None, Some(uvec2(0, 43)));
-
-    WFCEntity::new(&model, 2, tileset, map_pos, tile_size, tiles_x, tiles_y, 42, error_tile)
+    WFCEntity::new(tiles.clone(), &model, 2, tileset, map_pos, tile_size, tiles_x, tiles_y, 42, error_tile)
 }
 
 async fn get_tile_set() -> TileSet
@@ -43,13 +44,21 @@ fn get_map_pos(width: usize, height: usize, tile_size: f32) -> Vec3
     }
 }
 
-async fn get_model_entity(model: &Array2D<TileData>) -> TileMapEntity
+async fn get_model_entity(tiles: &Vec<TileData>, model: &Array2D<Option<usize>>) -> TileMapEntity
 {
     let tile_size = 50.0;
     let pos = get_map_pos(model.width(), model.height(), tile_size);
     let tileset = get_tile_set().await;
 
-    TileMapEntity::from_array2d(&model, tileset, pos, tile_size)
+    TileMapEntity::from_array2d(tiles.clone(), &model, tileset, pos, tile_size)
+}
+
+fn get_tiles() -> Vec<TileData>
+{
+    let grass_tile = TileData::new(None, Some(uvec2(3, 0)), String::from("Grass"), String::from("G"));
+    let house_tile = TileData::new(Some(uvec2(0, 1)), Some(uvec2(3, 0)), String::from("House"), String::from("H"));
+    let error_tile = TileData::new(None, Some(uvec2(0, 43)), String::from("Unknown"), String::from(""));
+    vec![grass_tile, house_tile, error_tile]
 }
 
 #[macroquad::main("BasicShapes")]
@@ -57,16 +66,15 @@ async fn main() {
     let camera = &mut Camera2D::from_display_rect(Rect { x: 0.0, y: 0.0, w: screen_width(), h: screen_height() });
     set_camera(camera);
     
-    let grass_tile = TileData::new(None, Some(uvec2(3, 0)));
-    let house_tile = TileData::new(Some(uvec2(0, 1)), Some(uvec2(3, 0)));
-    let mut model = Array2D::<TileData>::new(5, 5, vec![grass_tile; 5 * 5]);
-    *model.at_mut(2, 2) = house_tile;
-    let mut entity = get_wfc_entity(&model).await;
-    entity.collapse_full();
+    let tiles = get_tiles();
+    
+    let model = Array2D::<Option<usize>>::new_default(5, 5);
+    let mut entity = get_model_entity(&tiles, &model).await;
+    let mut editor = TileMapEditor::new(&mut entity, *camera);
 
     loop {
         clear_background(BLUE);
-        entity.render();
+        editor.update();
         next_frame().await
     }
 }
