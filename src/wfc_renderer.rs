@@ -2,6 +2,7 @@ use macroquad::prelude::*;
 use crate::utils::Array2D;
 use crate::wfc::*;
 use crate::tile_set::*;
+use crate::tile_map::*;
 
 #[derive(Clone, Debug)]
 pub struct WFCEntity

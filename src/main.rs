@@ -4,13 +4,14 @@ mod wfc;
 mod wfc_renderer;
 mod file_system;
 mod tile_map_editor;
+mod tile_map;
 
 use macroquad::prelude::*;
-use macroquad::ui::*;
 use tile_map_editor::TileMapEditor;
 use tile_set::*;
 use utils::*;
 use wfc_renderer::*;
+use tile_map::*;
 
 async fn get_wfc_entity(tiles: &Vec<TileData>, model: &Array2D<usize>, error_tile: Option<usize>) -> WFCEntity
 {
@@ -44,9 +45,16 @@ fn get_map_pos(width: usize, height: usize, tile_size: f32) -> Vec3
     }
 }
 
+fn get_map_tile_size(width: usize, height: usize, map_to_screen_scale: f32) -> f32
+{
+    let smallest = width.max(height);
+    let smallest_screen_len = screen_width().max(screen_height());
+    smallest_screen_len * map_to_screen_scale / smallest as f32
+}
+
 async fn get_model_entity(tiles: &Vec<TileData>, model: &Array2D<Option<usize>>) -> TileMapEntity
 {
-    let tile_size = 50.0;
+    let tile_size = get_map_tile_size(model.width(), model.height(), 0.7);
     let pos = get_map_pos(model.width(), model.height(), tile_size);
     let tileset = get_tile_set().await;
 
@@ -55,9 +63,9 @@ async fn get_model_entity(tiles: &Vec<TileData>, model: &Array2D<Option<usize>>)
 
 fn get_tiles() -> Vec<TileData>
 {
-    let grass_tile = TileData::new(None, Some(uvec2(3, 0)), String::from("Grass"), String::from("G"));
-    let house_tile = TileData::new(Some(uvec2(0, 1)), Some(uvec2(3, 0)), String::from("House"), String::from("H"));
-    let error_tile = TileData::new(None, Some(uvec2(0, 43)), String::from("Unknown"), String::from(""));
+    let grass_tile = TileData::new(None, Some(TileIndex::new(3, 0)), String::from("Grass"), String::from("G"));
+    let house_tile = TileData::new(Some(TileIndex::new(0, 1)), Some(TileIndex::new(3, 0)), String::from("House"), String::from("H"));
+    let error_tile = TileData::new(None, Some(TileIndex::new(0, 43)), String::from("Unknown"), String::from(""));
     vec![grass_tile, house_tile, error_tile]
 }
 
@@ -68,9 +76,17 @@ async fn main() {
     
     let tiles = get_tiles();
     
-    let model = Array2D::<Option<usize>>::new_default(5, 5);
+    let model = Array2D::<Option<usize>>::new_default(13, 13);
     let mut entity = get_model_entity(&tiles, &model).await;
-    let mut editor = TileMapEditor::new(&mut entity, *camera);
+
+    let mut editor = TileMapEditor::new(&mut entity, *camera, Some::<fn(&mut TileMapEntity)>(|map| {
+        let tile_size = get_map_tile_size(map.tile_map().width(), map.tile_map().height(), 0.7);
+        let map_pos = get_map_pos(map.tile_map().width(), map.tile_map().height(), tile_size);
+        map.pos = map_pos;
+        map.tile_size = tile_size;
+    }));
+
+    let _ = file_system::serialize_to_file(&5, "example_file.txt");
 
     loop {
         clear_background(BLUE);
