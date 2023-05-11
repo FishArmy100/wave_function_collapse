@@ -198,7 +198,7 @@ impl Tile
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TileMap
 {
     width: usize,
@@ -348,6 +348,12 @@ impl TileMapEntity
     pub fn new<F: Fn(usize, usize)->Option<usize>>(pos: Vec3, width: usize, height: usize, tile_size: f32, tile_set: TileSet, tiles: Vec<TileData>, generator: &F) -> Self
     {
         let map = TileMap::new(width, height, tile_set, tiles, generator);
+        let meshes = map.to_mesh(pos, tile_size);
+        Self { pos, tile_size, map, meshes }
+    }
+
+    pub fn from_tile_map(map: TileMap, pos: Vec3, tile_size: f32) -> TileMapEntity
+    {
         let meshes = map.to_mesh(pos, tile_size);
         Self { pos, tile_size, map, meshes }
     }

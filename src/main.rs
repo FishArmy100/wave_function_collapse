@@ -6,8 +6,6 @@ mod file_system;
 mod tile_map_editor;
 mod tile_map;
 
-use core::num;
-
 use macroquad::prelude::*;
 use tile_map_editor::TileMapEditor;
 use tile_set::*;
@@ -31,13 +29,12 @@ async fn get_wfc_entity(tiles: &Vec<TileData>, model: &Array2D<usize>, error_til
 
 async fn get_tile_set() -> TileSet
 {
-    let texture = load_texture("C:\\dev\\Rust\\wave_function_collapse\\resources\\medieval_pixel_art_tileset\\TileSet.png").await.unwrap();
-    texture.set_filter(FilterMode::Nearest);
-    let tileset = TileSet::new(texture, 7, 44 + 8);
+    let path = "C:\\dev\\Rust\\wave_function_collapse\\resources\\medieval_pixel_art_tileset\\TileSet.png";
+    let tileset = TileSet::from_file(path, 7, 44 + 8).await;
 
     let temp_path = "temp.txt";
+
     file_system::serialize_to_file(&tileset, temp_path);
-    
     let tileset = file_system::deserialize_from_file::<TileSet>(temp_path);
     
     tileset
