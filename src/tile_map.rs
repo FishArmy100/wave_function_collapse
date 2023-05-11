@@ -1,16 +1,17 @@
 use core::fmt;
 
 use itertools::Itertools;
-use macroquad::miniquad::ElapsedQuery;
 use macroquad::prelude::*;
 use macroquad::models::{Vertex, Mesh};
+
+use serde::{Serialize, Deserialize};
 
 use crate::utils::Array2D;
 use crate::tile_set::*;
 
 const SUB_MAP_MAX_SIZE: UVec2 = UVec2{x: 10, y: 10};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct SubMap
 {
     width: u16,
@@ -78,7 +79,7 @@ impl SubMap
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Hash, Default, Serialize, Deserialize)]
 pub struct TileIndex
 {
     pub x: u16,
@@ -93,7 +94,7 @@ impl TileIndex
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Hash, Default)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Default, Serialize, Deserialize)]
 pub struct TileData
 {
     pub name: String,
@@ -127,7 +128,7 @@ impl TileData
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tile
 {
     x: u16,

@@ -1,8 +1,9 @@
 use std::{ops::Add, fmt};
 use macroquad::prelude::*;
+use serde::{Serialize, Deserialize};
 
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Array2D<T>
 {
     width: usize,
@@ -214,7 +215,7 @@ impl<'a, T> Iterator for Array2DIter<'a, T>
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArrayPos
 {
     pub x: usize,

@@ -6,6 +6,8 @@ mod file_system;
 mod tile_map_editor;
 mod tile_map;
 
+use core::num;
+
 use macroquad::prelude::*;
 use tile_map_editor::TileMapEditor;
 use tile_set::*;
@@ -31,7 +33,14 @@ async fn get_tile_set() -> TileSet
 {
     let texture = load_texture("C:\\dev\\Rust\\wave_function_collapse\\resources\\medieval_pixel_art_tileset\\TileSet.png").await.unwrap();
     texture.set_filter(FilterMode::Nearest);
-    TileSet::new(texture, 7, 44 + 8)
+    let tileset = TileSet::new(texture, 7, 44 + 8);
+
+    let temp_path = "temp.txt";
+    file_system::serialize_to_file(&tileset, temp_path);
+    
+    let tileset = file_system::deserialize_from_file::<TileSet>(temp_path);
+    
+    tileset
 }
 
 fn get_map_pos(width: usize, height: usize, tile_size: f32) -> Vec3
@@ -85,8 +94,6 @@ async fn main() {
         map.pos = map_pos;
         map.tile_size = tile_size;
     }));
-
-    let _ = file_system::serialize_to_file(&5, "example_file.txt");
 
     loop {
         clear_background(BLUE);
