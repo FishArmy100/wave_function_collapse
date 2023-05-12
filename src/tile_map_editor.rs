@@ -32,7 +32,7 @@ pub struct TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut TileMapEn
     tile_options: Vec<String>,
     entity: &'map mut TileMapEntity,
     pub camera: Camera2D,
-    pub on_map_size_changed: Option<TFunc>
+    pub on_map_size_changed: Option<TFunc>,
 }
 
 impl<'map, TFunc> TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut TileMapEntity)
