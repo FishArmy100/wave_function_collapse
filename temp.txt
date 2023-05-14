@@ -1,1 +1,5 @@
-{"width":7,"height":52,"texture_path":"C:\\dev\\Rust\\wave_function_collapse\\resources\\medieval_pixel_art_tileset\\TileSet.png"}
+{
+  "width": 7,
+  "height": 52,
+  "texture_path": "C:\\dev\\Rust\\wave_function_collapse\\resources\\medieval_pixel_art_tileset\\TileSet.png"
+}

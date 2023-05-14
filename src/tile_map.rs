@@ -94,6 +94,11 @@ impl TileIndex
     }
 }
 
+pub fn tile_index(x: u16, y: u16) -> TileIndex
+{
+    TileIndex { x, y }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Default, Serialize, Deserialize)]
 pub struct TileData
 {
@@ -122,9 +127,9 @@ impl fmt::Display for TileData
 
 impl TileData
 {
-    pub fn new(top: Option<TileIndex>, base: Option<TileIndex>, name: String, debug_name: String) -> TileData
+    pub fn new(top: Option<TileIndex>, base: Option<TileIndex>, name: &str, debug_name: &str) -> TileData
     {
-        TileData { top, base, name, debug_name }
+        TileData { top, base, name: name.to_owned(), debug_name: debug_name.to_owned() }
     }
 }
 

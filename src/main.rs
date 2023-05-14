@@ -69,10 +69,15 @@ async fn get_model_entity(tiles: &Vec<TileData>, model: &Array2D<Option<usize>>)
 
 fn get_tiles() -> Vec<TileData>
 {
-    let grass_tile = TileData::new(None, Some(TileIndex::new(3, 0)), String::from("Grass"), String::from("G"));
-    let house_tile = TileData::new(Some(TileIndex::new(0, 1)), Some(TileIndex::new(3, 0)), String::from("House"), String::from("H"));
-    let error_tile = TileData::new(None, Some(TileIndex::new(0, 43)), String::from("Unknown"), String::from(""));
-    vec![grass_tile, house_tile, error_tile]
+    let grass_tile =    TileData::new(None, Some(tile_index(3, 0)), "Grass", "G");
+    let error_tile =    TileData::new(None, Some(tile_index(0, 43)), "Unknown", "");
+    let house_tile =    TileData::new(Some(tile_index(0, 1)), Some(tile_index(3, 0)), "House", "H");
+    let trees =         TileData::new(Some(tile_index(4, 0)), Some(tile_index(2, 0)), "Trees", "T");
+    let mountains =     TileData::new(Some(tile_index(5, 1)), Some(tile_index(0, 0)), "Mountains", "M");
+    let bushes =        TileData::new(Some(tile_index(6, 3)), Some(tile_index(3, 0)), "Bushes", "B");
+    
+    
+    vec![grass_tile, house_tile, trees, mountains, bushes, error_tile]
 }
 
 #[macroquad::main("BasicShapes")]

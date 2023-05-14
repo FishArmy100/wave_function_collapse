@@ -4,14 +4,12 @@ use std::io::prelude::*;
 use serde::*;
 use serde::de::DeserializeOwned;
 
-use crate::tile_map::TileMap;
-
 pub fn serialize_to_file<T>(data: &T, path: &str)
     where T : Serialize
 {
     let path = Path::new(path);
 
-    let json = match serde_json::to_string(data) 
+    let json = match serde_json::to_string_pretty(data) 
     {
         Ok(ok) => ok,
         Err(error) => panic!("{}", error)
@@ -32,7 +30,7 @@ pub fn serialize_to_file<T>(data: &T, path: &str)
 pub fn print_serialized<T>(data: &T) -> String
     where T : Serialize
 {
-    let yaml = match serde_json::to_string(data) 
+    let yaml = match serde_json::to_string_pretty(data) 
     {
         Ok(ok) => ok,
         Err(error) => panic!("{}", error)
