@@ -13,10 +13,25 @@ pub struct Array2D<T>
 
 impl<T> Array2D<T>
 {
-    pub fn new(width: usize, height: usize, data: Vec<T>) -> Array2D<T>
+    pub fn new_from_vec(width: usize, height: usize, data: Vec<T>) -> Array2D<T>
     {
         assert!(width * height == data.len());
         Array2D { width, height, data }
+    }
+
+    pub fn new<F>(width: usize, height: usize, init: &F) -> Self 
+        where F : Fn(usize, usize)->T
+    {
+        let mut data = Vec::<T>::with_capacity(width * height);
+        for y in 0..height
+        {
+            for x in 0..width
+            {
+                data.push(init(x, y));
+            }
+        }
+
+        Self::new_from_vec(width, height, data)
     }
 
     pub fn at(&self, x: usize, y: usize) -> &T
@@ -36,6 +51,15 @@ impl<T> Array2D<T>
     {
         NeighborPositionIterator::new(radius, self.width, self.height, pos)
     }
+}
+
+impl<T> Array2D<T> where T : Clone 
+{
+    pub fn new_with_value(width: usize, height: usize, value: T) -> Self
+    {
+        let data = vec![value; width * height];
+        Self::new_from_vec(width, height, data)
+    }    
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -260,4 +284,4 @@ impl<'a, T: fmt::Display + 'a> fmt::Display for SliceDisplay<'a, T> {
         }
         Ok(())
     }
-} 
+}

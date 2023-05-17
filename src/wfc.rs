@@ -93,7 +93,7 @@ impl<T> Pattern<T> where T : Clone + Eq + Hash
                 }
             }
 
-            Some(Self {radius, tiles: Array2D::<T>::new(pattern_size, pattern_size, data)})
+            Some(Self {radius, tiles: Array2D::<T>::new_from_vec(pattern_size, pattern_size, data)})
         }
         else
         {
@@ -173,7 +173,7 @@ impl<T> Wave<T> where T : Eq + Hash + Clone + fmt::Display
     {
         let patterns = Pattern::get_patterns(model, pattern_radius);
         let wave_tiles = WaveTile::SuperPos((0..patterns.len()).collect());
-        let wave = Array2D::<WaveTile<T>>::new(width, height, vec![wave_tiles; width * height]);
+        let wave = Array2D::<WaveTile<T>>::new_from_vec(width, height, vec![wave_tiles; width * height]);
         let rng = StdRng::seed_from_u64(seed);
 
         Wave { patterns, wave, rng, pattern_radius }

@@ -3,6 +3,7 @@ use crate::utils::Array2D;
 use crate::wfc::*;
 use crate::tile_set::*;
 use crate::tile_map::*;
+use crate::tile_map_entity::*;
 
 #[derive(Clone, Debug)]
 pub struct WFCEntity

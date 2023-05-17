@@ -1,5 +1,6 @@
 use crate::file_system;
 use crate::tile_map::*;
+use crate::tile_map_entity::*;
 use macroquad::prelude::*;
 use macroquad::ui::*;
 use macroquad::ui::widgets::Window;
@@ -63,7 +64,14 @@ impl<'map, TFunc> TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut Ti
             if is_mouse_button_down(MouseButton::Left)
             {
                 let mouse_world_pos = self.camera.screen_to_world(mouse_pos);
-                self.entity.set_from_pos(mouse_world_pos, self.current_tile);
+                if self.entity.set_from_pos(mouse_world_pos, self.current_tile)
+                {
+                    println!("Modified map!");
+                }
+                else 
+                {
+                    println!("Failed to modify map :(");    
+                }
             }
 
             if is_mouse_button_down(MouseButton::Right)

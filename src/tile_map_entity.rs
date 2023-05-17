@@ -1,3 +1,5 @@
+use core::fmt;
+
 use macroquad::prelude::*;
 use crate::utils::*;
 use crate::tile_set::*;
@@ -8,7 +10,8 @@ pub struct TileMapEntity
     pub pos: Vec3,
     pub tile_size: f32,
     map: TileMap,
-    meshes: Vec<Mesh>
+
+    map_texture: Texture2D
 }
 
 impl Clone for TileMapEntity
@@ -19,15 +22,7 @@ impl Clone for TileMapEntity
             pos: self.pos.clone(), 
             tile_size: self.tile_size.clone(), 
             map: self.map.clone(), 
-            meshes: (&self.meshes)
-                        .into_iter()
-                        .map(|m| Mesh 
-                            {
-                                vertices: m.vertices.clone(), 
-                                indices: m.indices.clone(), 
-                                texture: m.texture.clone()
-                            })
-                        .collect_vec()
+            map_texture: self.map_texture.clone()
         }
     }
 }
@@ -48,14 +43,14 @@ impl TileMapEntity
     pub fn new<F: Fn(usize, usize)->Option<usize>>(pos: Vec3, width: usize, height: usize, tile_size: f32, tile_set: TileSet, tiles: Vec<TileData>, generator: &F) -> Self
     {
         let map = TileMap::new(width, height, tile_set, tiles, generator);
-        let meshes = map.to_mesh(pos, tile_size);
-        Self { pos, tile_size, map, meshes }
+        let map_texture = map.get_texture(color_u8!(0, 0, 0, 0), FilterMode::Nearest);
+        Self { pos, tile_size, map, map_texture }
     }
 
     pub fn from_tile_map(map: TileMap, pos: Vec3, tile_size: f32) -> TileMapEntity
     {
-        let meshes = map.to_mesh(pos, tile_size);
-        Self { pos, tile_size, map, meshes }
+        let map_texture = map.get_texture(color_u8!(0, 0, 0, 0), FilterMode::Nearest);
+        Self { pos, tile_size, map, map_texture }
     }
 
     pub fn from_array2d(tiles: Vec<TileData>, base: &Array2D<Option<usize>>, tile_set: TileSet, pos: Vec3, tile_size: f32) -> Self
@@ -125,7 +120,7 @@ impl TileMapEntity
 
     pub fn update(&mut self)
     {
-        self.meshes = self.map.to_mesh(self.pos, self.tile_size);
+        self.map_texture = self.map.get_texture(color_u8!(0, 0, 0, 0), FilterMode::Nearest);
     }
 
     pub fn set_from_pos(&mut self, pos: Vec2, data: Option<usize>) -> bool
@@ -144,10 +139,17 @@ impl TileMapEntity
 
     pub fn render(&self)
     {
-        for mesh in &self.meshes
+        let texture_params = DrawTextureParams 
         {
-            draw_mesh(mesh)
-        }
+            dest_size: Some(self.size()),
+            source: None,
+            rotation: 0.0,
+            flip_x: false,
+            flip_y: false,
+            pivot: None
+        };
+
+        draw_texture_ex(self.map_texture, self.pos.x, self.pos.y, WHITE, texture_params);
     }
 
     pub fn render_debug_lines(&self)

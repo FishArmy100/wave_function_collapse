@@ -5,6 +5,7 @@ mod wfc_renderer;
 mod file_system;
 mod tile_map;
 mod gui;
+mod tile_map_entity;
 
 use macroquad::prelude::*;
 use gui::{tile_map_editor::TileMapEditor, pattern_viewer::{self, PatternViewer}};
@@ -12,6 +13,7 @@ use tile_set::*;
 use utils::*;
 use wfc_renderer::*;
 use tile_map::*;
+use tile_map_entity::*;
 
 async fn get_wfc_entity(tiles: &Vec<TileData>, model: &Array2D<usize>, error_tile: Option<usize>) -> WFCEntity
 {
@@ -95,19 +97,23 @@ fn get_editor<'a>(entity: &'a mut TileMapEntity, camera: Camera2D) -> TileMapEdi
 async fn main() {
     let camera = &mut Camera2D::from_display_rect(Rect { x: 0.0, y: 0.0, w: screen_width(), h: screen_height() });
     set_camera(camera);
-    camera.offset.x = 5.;
     
     let tiles = get_tiles();
     
-    let mut model = Array2D::<usize>::new_default(5, 5);
-    *model.at_mut(2, 2) = 1;
-    let wfc_entity = get_wfc_entity(&tiles, &model, Some(tiles.len() - 1)).await;
+    let mut model = Array2D::<Option<usize>>::new_default(13, 13);
+    *model.at_mut(6, 6) = Some(1);
+    let mut entity = get_model_entity(&tiles, &model).await;
 
-    let mut pattern_viewer = PatternViewer::new(&tiles, wfc_entity.patterns(), wfc_entity.tile_set());
+    let mut editor = TileMapEditor::new(&mut entity, *camera, Some::<fn(&mut TileMapEntity)>(|map| {
+        let tile_size = get_map_tile_size(map.tile_map().width(), map.tile_map().height(), 0.7);
+        let map_pos = get_map_pos(map.tile_map().width(), map.tile_map().height(), tile_size);
+        map.pos = map_pos;
+        map.tile_size = tile_size;
+    }));
 
     loop {
         clear_background(BLUE);
-        pattern_viewer.update();
+        editor.update();
         next_frame().await
     }
 }
