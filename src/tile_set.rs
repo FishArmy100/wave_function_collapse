@@ -26,6 +26,14 @@ impl TileSet
     pub fn tile_count_height(&self) -> u16 {self.height}
     pub fn texture(&self) -> Texture2D {self.texture}
 
+    pub fn tile_size(&self) -> (u16, u16) 
+    {
+        (
+            self.texture.width() as u16 / self.tile_count_width(),
+            self.texture.height() as u16 / self.tile_count_height()
+        )
+    }
+
     fn get_tile_uv(&self, x: u16, y: u16) -> Vec2
     {
         let tile_size = Vec2{x: self.texture.width() / self.tile_count_width() as f32, y: self.texture.height() / self.tile_count_height() as f32};

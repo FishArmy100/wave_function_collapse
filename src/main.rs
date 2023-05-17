@@ -3,11 +3,11 @@ mod utils;
 mod wfc;
 mod wfc_renderer;
 mod file_system;
-mod tile_map_editor;
 mod tile_map;
+mod gui;
 
 use macroquad::prelude::*;
-use tile_map_editor::TileMapEditor;
+use gui::{tile_map_editor::TileMapEditor, pattern_viewer::{self, PatternViewer}};
 use tile_set::*;
 use utils::*;
 use wfc_renderer::*;
@@ -69,37 +69,45 @@ async fn get_model_entity(tiles: &Vec<TileData>, model: &Array2D<Option<usize>>)
 
 fn get_tiles() -> Vec<TileData>
 {
-    let grass_tile =    TileData::new(None, Some(tile_index(3, 0)), "Grass", "G");
-    let error_tile =    TileData::new(None, Some(tile_index(0, 43)), "Unknown", "");
-    let house_tile =    TileData::new(Some(tile_index(0, 1)), Some(tile_index(3, 0)), "House", "H");
-    let trees =         TileData::new(Some(tile_index(4, 0)), Some(tile_index(2, 0)), "Trees", "T");
-    let mountains =     TileData::new(Some(tile_index(5, 1)), Some(tile_index(0, 0)), "Mountains", "M");
-    let bushes =        TileData::new(Some(tile_index(6, 3)), Some(tile_index(3, 0)), "Bushes", "B");
+    let grass_tile =    TileData::new(vec![tile_index(3, 0)], "Grass", "G");
+    let error_tile =    TileData::new(vec![tile_index(0, 43)], "Unknown", "");
+    let house_tile =    TileData::new(vec![tile_index(3, 0), tile_index(0, 1)], "House", "H");
+    let trees =         TileData::new(vec![tile_index(2, 0), tile_index(4, 0)], "Trees", "T");
+    let mountains =     TileData::new(vec![tile_index(0, 0), tile_index(5, 1)], "Mountains", "M");
+    let bushes =        TileData::new(vec![tile_index(3, 0), tile_index(6, 3)], "Bushes", "B");
     
-    
-    vec![grass_tile, house_tile, trees, mountains, bushes, error_tile]
+    let bridge = TileData::new(vec![tile_index(0, 0), tile_index(2, 14), tile_index(4, 34)], "Bridge", "Br");
+
+    vec![grass_tile, house_tile, trees, mountains, bushes, bridge, error_tile]
+}
+
+fn get_editor<'a>(entity: &'a mut TileMapEntity, camera: Camera2D) -> TileMapEditor<'a, fn(&mut TileMapEntity)>
+{
+    TileMapEditor::new(entity, camera, Some::<fn(&mut TileMapEntity)>(|map| {
+        let tile_size = get_map_tile_size(map.tile_map().width(), map.tile_map().height(), 0.7);
+        let map_pos = get_map_pos(map.tile_map().width(), map.tile_map().height(), tile_size);
+        map.pos = map_pos;
+        map.tile_size = tile_size;
+    }))
 }
 
 #[macroquad::main("BasicShapes")]
 async fn main() {
     let camera = &mut Camera2D::from_display_rect(Rect { x: 0.0, y: 0.0, w: screen_width(), h: screen_height() });
     set_camera(camera);
+    camera.offset.x = 5.;
     
     let tiles = get_tiles();
     
-    let model = Array2D::<Option<usize>>::new_default(13, 13);
-    let mut entity = get_model_entity(&tiles, &model).await;
+    let mut model = Array2D::<usize>::new_default(5, 5);
+    *model.at_mut(2, 2) = 1;
+    let wfc_entity = get_wfc_entity(&tiles, &model, Some(tiles.len() - 1)).await;
 
-    let mut editor = TileMapEditor::new(&mut entity, *camera, Some::<fn(&mut TileMapEntity)>(|map| {
-        let tile_size = get_map_tile_size(map.tile_map().width(), map.tile_map().height(), 0.7);
-        let map_pos = get_map_pos(map.tile_map().width(), map.tile_map().height(), tile_size);
-        map.pos = map_pos;
-        map.tile_size = tile_size;
-    }));
+    let mut pattern_viewer = PatternViewer::new(&tiles, wfc_entity.patterns(), wfc_entity.tile_set());
 
     loop {
         clear_background(BLUE);
-        editor.update();
+        pattern_viewer.update();
         next_frame().await
     }
 }

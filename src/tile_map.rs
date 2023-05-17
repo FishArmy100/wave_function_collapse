@@ -6,7 +6,7 @@ use macroquad::models::{Vertex, Mesh};
 
 use serde::{Serialize, Deserialize};
 
-use crate::utils::Array2D;
+use crate::utils::{Array2D, ArrayPos};
 use crate::tile_set::*;
 
 const SUB_MAP_MAX_SIZE: UVec2 = UVec2{x: 10, y: 10};
@@ -60,18 +60,13 @@ impl SubMap
             for y in 0..self.height
             {
                 let generated_verticies = self.at(x, y).get_verticies(vertex_offset, scale, tileset, tiles);
-                if let Some(base_verts) = generated_verticies.0
+                for verts in generated_verticies
                 {
-                    verticies.extend_from_slice(&base_verts);
+                    verticies.extend_from_slice(&verts);
                     triangles.extend_from_slice(&self.at(x, y).get_triangles(triangle_offset));
                     triangle_offset += 4;
                 }
-                if let Some(top_verts) = generated_verticies.1
-                {
-                    verticies.extend_from_slice(&top_verts);
-                    triangles.extend_from_slice(&self.at(x, y).get_triangles(triangle_offset));
-                    triangle_offset += 4;
-                }
+                
             }
         }
 
@@ -104,32 +99,22 @@ pub struct TileData
 {
     pub name: String,
     pub debug_name: String,
-    pub top: Option<TileIndex>,
-    pub base: Option<TileIndex>
+    pub textures: Vec<TileIndex>,
 }
 
 impl fmt::Display for TileData
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}; {}]", 
-            match self.top 
-            {
-                Some(v) => format!("({}, {})", v.x, v.y),
-                None => String::from("()")
-            },
-            match self.base 
-            {
-                Some(v) => format!("({}, {})", v.x, v.y),
-                None => String::from("()")
-            })
+        let str = self.textures.iter().map(|t| format!("({}, {})", t.x, t.y)).join("; ");
+        write!(f, "[{}]", str)
     }
 }
 
 impl TileData
 {
-    pub fn new(top: Option<TileIndex>, base: Option<TileIndex>, name: &str, debug_name: &str) -> TileData
+    pub fn new(textures: Vec<TileIndex>, name: &str, debug_name: &str) -> TileData
     {
-        TileData { top, base, name: name.to_owned(), debug_name: debug_name.to_owned() }
+        TileData { textures, name: name.to_owned(), debug_name: debug_name.to_owned() }
     }
 }
 
@@ -179,27 +164,17 @@ impl Tile
         [gen(0, 0), gen(1, 0), gen(0, 1), gen(1, 1)]
     }
 
-    pub fn get_verticies(&self, offset: Vec3, scale: f32, tileset: &TileSet, tiles: &Vec<TileData>) -> (Option<[Vertex; 4]>, Option<[Vertex; 4]>)
+    pub fn get_verticies(&self, offset: Vec3, scale: f32, tileset: &TileSet, tiles: &Vec<TileData>) -> Vec<[Vertex; 4]>
     {
-        let base = if let Some(id) = match self.data { Some(data) => tiles[data].base, None => None}
+        let Some(index) = self.data else { return vec!() };
+        let textures = &tiles[index].textures;
+        let mut verticies: Vec<[Vertex; 4]> = Vec::with_capacity(textures.len());
+        for texture in textures
         {
-            Some(self.get_verticies_single(id, offset, scale, tileset, tiles))
+            verticies.push(self.get_verticies_single(*texture, offset, scale, tileset, tiles));
         }
-        else
-        {
-            None
-        };
 
-        let top = if let Some(id) = match self.data { Some(data) => tiles[data].top, None => None}
-        {
-            Some(self.get_verticies_single(id, offset, scale, tileset, tiles))
-        }
-        else
-        {
-            None
-        };
-
-        (base, top)
+        verticies
     }
 }
 
@@ -213,6 +188,22 @@ pub struct TileMap
     tile_set: TileSet,
     sub_maps_x: usize,
     sub_maps_y: usize,
+}
+
+fn layer_color(top: Color, base: Color) -> Color
+{
+    let a = top.to_vec();
+    let b = base.to_vec();
+
+    let a_alpha = a.w;
+    let b_alpha = b.w;
+
+    let alpha = a_alpha + b_alpha * (1.0 - a_alpha);
+    let a_color = a.truncate();
+    let b_color = b.truncate();
+
+    let o_color = (a_color * a_alpha + b_color * b_alpha * (1.0 - a_alpha)) / alpha;
+    Color::from_vec(o_color.extend(alpha))
 }
 
 impl TileMap
@@ -306,178 +297,44 @@ impl TileMap
                   .map(|m| m.to_mesh(offset, scale, &self.tile_set, &self.tiles))
                   .collect()
     }
+
+    fn set_sub_image(&self, image: &mut Image, offset: ArrayPos, tile_set_image: &Image, background_color: Color)
+    {
+        let tile = self.at(offset.x, offset.y);
+        let tile_size = self.tile_set().tile_size();
+        let start_pos = (tile_size.0 * offset.x as u16, tile_size.1 * offset.y as u16);
+
+        for x in 0..tile_size.0
+        {
+            for y in 0..tile_size.1
+            {
+                let mut pixel_color = background_color;
+                for i in &tile.textures
+                {
+                    let pixel_pos = (i.x * tile_size.0 + x, i.y * tile_size.1 + y);
+                    let tile_pixel = tile_set_image.get_pixel(pixel_pos.0 as u32, pixel_pos.1 as u32);
+                    pixel_color = layer_color(tile_pixel, pixel_color);
+                }
+
+                image.set_pixel((start_pos.0 + x) as u32, (start_pos.1 + y) as u32, pixel_color)
+            }
+        }
+    }
+
+    pub fn gen_image(&self) -> Image
+    {
+        let tile_size = tileset.tile_size();
+        let tileset_image = tileset.texture().get_texture_data();
+
+        let mut image = Image::gen_image_color(tile_size.0 * tile_indexes.width() as u16, tile_size.1 * tile_indexes.height() as u16, color_u8!(0, 0, 0, 0));
+
+        for item in tile_indexes
+        {
+            let (pos, tile) = item;
+            set_sub_image(&mut image, &tiles[*tile], &tileset_image, tile_size, pos, BLACK);
+        }
+
+        image
+    }
 }
 
-pub struct TileMapEntity
-{
-    pub pos: Vec3,
-    pub tile_size: f32,
-    map: TileMap,
-    meshes: Vec<Mesh>
-}
-
-impl Clone for TileMapEntity
-{
-    fn clone(&self) -> Self {
-        Self 
-        { 
-            pos: self.pos.clone(), 
-            tile_size: self.tile_size.clone(), 
-            map: self.map.clone(), 
-            meshes: (&self.meshes)
-                        .into_iter()
-                        .map(|m| Mesh 
-                            {
-                                vertices: m.vertices.clone(), 
-                                indices: m.indices.clone(), 
-                                texture: m.texture.clone()
-                            })
-                        .collect_vec()
-        }
-    }
-}
-
-impl fmt::Debug for TileMapEntity
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TileMapEntity")
-            .field("pos", &self.pos)
-            .field("tile_size", &self.tile_size)
-            .field("map", &self.map)
-            .finish_non_exhaustive()
-    }
-}
-
-impl TileMapEntity
-{
-    pub fn new<F: Fn(usize, usize)->Option<usize>>(pos: Vec3, width: usize, height: usize, tile_size: f32, tile_set: TileSet, tiles: Vec<TileData>, generator: &F) -> Self
-    {
-        let map = TileMap::new(width, height, tile_set, tiles, generator);
-        let meshes = map.to_mesh(pos, tile_size);
-        Self { pos, tile_size, map, meshes }
-    }
-
-    pub fn from_tile_map(map: TileMap, pos: Vec3, tile_size: f32) -> TileMapEntity
-    {
-        let meshes = map.to_mesh(pos, tile_size);
-        Self { pos, tile_size, map, meshes }
-    }
-
-    pub fn from_array2d(tiles: Vec<TileData>, base: &Array2D<Option<usize>>, tile_set: TileSet, pos: Vec3, tile_size: f32) -> Self
-    {
-        Self::new(pos, base.width(), base.height(), tile_size, tile_set, tiles, &|x, y| *base.at(x, y))
-    }
-
-    pub fn tile_map(&self) -> &TileMap
-    {
-        &self.map
-    }
-
-    pub fn tile_size(&self) -> f32
-    {
-        self.tile_size
-    }
-
-    pub fn size(&self) -> Vec2
-    {
-        vec2(self.map.width() as f32 * self.tile_size, self.map.height() as f32 * self.tile_size)
-    }
-
-    pub fn tile_count(&self) -> (usize, usize)
-    {
-        (self.map.width, self.map.height)
-    }
-
-    pub fn set_without_update(&mut self, x: usize, y: usize, data: Option<usize>)
-    {
-        self.map.at_mut(x, y).data = data;
-    }
-
-    pub fn set(&mut self, x: usize, y: usize, data: Option<usize>)
-    {
-        self.set_without_update(x, y, data);
-        self.update();
-    }
-
-    pub fn get_from_pos(&self, pos: Vec2) -> Option<&Tile>
-    {
-        let size = self.size();
-        if pos.x < self.pos.x || pos.x > self.pos.x + size.x ||
-           pos.y < self.pos.y || pos.y > self.pos.y + size.y
-        {
-            return None;
-        }
-
-        let relative = pos - self.pos.truncate();
-        let grid_pos = (relative / self.tile_size).floor().as_uvec2();
-        Some(self.map.at(grid_pos.x as usize, grid_pos.y as usize))
-    }
-
-    pub fn set_from_pos_without_update(&mut self, pos: Vec2, data: Option<usize>) -> bool
-    {
-        let size = self.size();
-        if pos.x < self.pos.x || pos.x > self.pos.x + size.x ||
-           pos.y < self.pos.y || pos.y > self.pos.y + size.y
-        {
-            return false;
-        }
-
-        let relative = pos - self.pos.truncate();
-        let grid_pos = (relative / self.tile_size).floor().as_uvec2();
-        self.map.at_mut(grid_pos.x as usize, grid_pos.y as usize).data = data;
-        true
-    }
-
-    pub fn update(&mut self)
-    {
-        self.meshes = self.map.to_mesh(self.pos, self.tile_size);
-    }
-
-    pub fn set_from_pos(&mut self, pos: Vec2, data: Option<usize>) -> bool
-    {
-        if self.set_from_pos_without_update(pos, data)
-        {
-            self.update();
-            true
-        }
-        else
-        {
-            false
-        }
-        
-    }
-
-    pub fn render(&self)
-    {
-        for mesh in &self.meshes
-        {
-            draw_mesh(mesh)
-        }
-    }
-
-    pub fn render_debug_lines(&self)
-    {
-        let line_color = BLACK;
-        let line_thickness = 3.0;
-
-        let pos = self.pos;
-        let size = vec2(self.map.width() as f32 * self.tile_size(), self.map.height() as f32 * self.tile_size());
-        
-        // draw outline
-        draw_rectangle_lines(pos.x, pos.y, size.x, size.y, line_thickness * 2.0, line_color);
-
-        // vertical lines
-        for x in 1..self.map.width()
-        {
-            let x_pos = pos.x + self.tile_size() * x as f32;
-            draw_line(x_pos, pos.y, x_pos, pos.y + size.y, line_thickness, line_color);
-        }
-
-        // horizontal lines
-        for y in 1..self.map.height()
-        {
-            let y_pos = pos.y + self.tile_size() * y as f32;
-            draw_line(pos.x, y_pos, pos.x + size.x, y_pos, line_thickness, line_color);
-        }
-    }
-}

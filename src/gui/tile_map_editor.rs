@@ -27,7 +27,7 @@ impl<'map, TFunc> TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut Ti
 {
     pub fn new(entity: &'map mut TileMapEntity, camera: Camera2D, on_map_size_changed: Option<TFunc>) -> Self
     {
-        let mut tile_options: Vec<_> = entity.tile_map()
+        let tile_options: Vec<_> = entity.tile_map()
             .tiles()
             .iter()
             .map(|t| t.name.clone())
