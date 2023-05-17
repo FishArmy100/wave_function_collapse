@@ -11,6 +11,9 @@
 - [Modifing in Parts](https://www.boristhebrave.com/2021/10/26/model-synthesis-and-modifying-in-blocks/)
 - [Custom Serde Serialization/Deserialization](https://gist.github.com/MightyPork/b79dd7feff685ec9da3d120026e83d01)
 - [Serde Help](https://serde.rs/)
+- Wave Function Collapse Implementations:
+    - [JDH](https://gist.github.com/jdah/ad997b858513a278426f8d91317115b9)
+    - [mxgmn](https://github.com/mxgmn/WaveFunctionCollapse)
 
 ## Dependencies:
 - [Macroquad](https://docs.rs/macroquad/latest/macroquad/index.html)
