@@ -89,11 +89,11 @@ impl<'p> PatternViewer<'p>
         self.texture.set_filter(FilterMode::Nearest);
     }
 
-    pub fn update(&mut self)
+    pub fn update(&mut self) -> bool
     {
         let size = Vec2 {x: 300., y: 400.};
         let pos = Vec2 {x: 200., y: 200.};
-        let _ = Window::new(hash!(), pos, size)
+        Window::new(hash!(), pos, size)
             .label("Pattern Viewer")
             .close_button(true)
             .ui(&mut root_ui(), |ui| 
@@ -120,6 +120,6 @@ impl<'p> PatternViewer<'p>
 
                     self.update_texture(); 
                 }
-            });
+            })
     }
 }

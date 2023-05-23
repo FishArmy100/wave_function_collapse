@@ -177,4 +177,10 @@ impl TileMapEntity
             draw_line(pos.x, y_pos, pos.x + size.x, y_pos, line_thickness, line_color);
         }
     }
+
+    pub fn render_with_debug_lines(&self)
+    {
+        self.render();
+        self.render_debug_lines();
+    }
 }

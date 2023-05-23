@@ -7,26 +7,23 @@ mod tile_map;
 mod gui;
 mod tile_map_entity;
 
-use macroquad::prelude::*;
-use gui::{tile_map_editor::TileMapEditor, pattern_viewer::{self, PatternViewer}};
+use macroquad::{prelude::*, ui::root_ui};
+use gui::{tile_map_editor::TileMapEditor, pattern_viewer::{PatternViewer}, intager_editor::*};
 use tile_set::*;
 use utils::*;
 use wfc_renderer::*;
 use tile_map::*;
 use tile_map_entity::*;
 
-async fn get_wfc_entity(tiles: &Vec<TileData>, model: &Array2D<usize>, error_tile: Option<usize>) -> WFCEntity
+const MAP_TO_SCREEN_SCALE: f32 = 0.7;
+
+async fn get_wfc_entity(tiles: &Vec<TileData>, model: &Array2D<usize>, error_tile: Option<usize>, width: usize, height: usize) -> WFCEntity
 {
     let tileset = get_tile_set().await;
+    let tile_size = get_map_tile_size(width, height, MAP_TO_SCREEN_SCALE);
+    let map_pos = get_map_pos(width, height, tile_size, false);
 
-    let tiles_x = 20;
-    let tiles_y = 20;
-
-    let tile_size = 20.0;
-
-    let map_pos = get_map_pos(tiles_x, tiles_y, tile_size);
-
-    WFCEntity::new(tiles.clone(), &model, 2, tileset, map_pos, tile_size, tiles_x, tiles_y, 42, error_tile)
+    WFCEntity::new(tiles.clone(), &model, 2, tileset, map_pos, tile_size, width, height, 42, error_tile)
 }
 
 async fn get_tile_set() -> TileSet
@@ -42,12 +39,12 @@ async fn get_tile_set() -> TileSet
     tileset
 }
 
-fn get_map_pos(width: usize, height: usize, tile_size: f32) -> Vec3
+fn get_map_pos(width: usize, height: usize, tile_size: f32, add_x_offset: bool) -> Vec3
 {
     let screen_center = Vec2{x: screen_width() / 2.0, y: screen_height() / 2.0};
     Vec3
     {
-        x: screen_center.x - (width as f32 * tile_size / 2.0),
+        x: screen_center.x - (width as f32 * tile_size / 2.0) + if add_x_offset {screen_width() / 8.0} else {0.0},
         y: screen_center.y - (height as f32 * tile_size  / 2.0),
         z: 0.0
     }
@@ -60,10 +57,10 @@ fn get_map_tile_size(width: usize, height: usize, map_to_screen_scale: f32) -> f
     smallest_screen_len * map_to_screen_scale / smallest as f32
 }
 
-async fn get_model_entity(tiles: &Vec<TileData>, model: &Array2D<Option<usize>>) -> TileMapEntity
+async fn get_model_entity(tiles: &Vec<TileData>, model: &Array2D<Option<usize>>, add_x_offset: bool) -> TileMapEntity
 {
-    let tile_size = get_map_tile_size(model.width(), model.height(), 0.7);
-    let pos = get_map_pos(model.width(), model.height(), tile_size);
+    let tile_size = get_map_tile_size(model.width(), model.height(), MAP_TO_SCREEN_SCALE);
+    let pos = get_map_pos(model.width(), model.height(), tile_size, add_x_offset);
     let tileset = get_tile_set().await;
 
     TileMapEntity::from_array2d(tiles.clone(), &model, tileset, pos, tile_size)
@@ -86,11 +83,125 @@ fn get_tiles() -> Vec<TileData>
 fn get_editor<'a>(entity: &'a mut TileMapEntity, camera: Camera2D) -> TileMapEditor<'a, fn(&mut TileMapEntity)>
 {
     TileMapEditor::new(entity, camera, Some::<fn(&mut TileMapEntity)>(|map| {
-        let tile_size = get_map_tile_size(map.tile_map().width(), map.tile_map().height(), 0.7);
-        let map_pos = get_map_pos(map.tile_map().width(), map.tile_map().height(), tile_size);
+        let tile_size = get_map_tile_size(map.tile_map().width(), map.tile_map().height(), MAP_TO_SCREEN_SCALE);
+        let map_pos = get_map_pos(map.tile_map().width(), map.tile_map().height(), tile_size, true);
         map.pos = map_pos;
         map.tile_size = tile_size;
     }))
+}
+
+async fn run_editor(entity: &mut TileMapEntity, camera: Camera2D)
+{
+    entity.pos = get_map_pos(entity.tile_map().width(), entity.tile_map().height(), entity.tile_size, true);
+    entity.update();
+
+    let mut editor = get_editor(entity, camera);
+    loop {
+        clear_background(BLUE);
+        let close_editor = editor.update();
+        next_frame().await;
+        if close_editor
+        {
+            entity.pos = get_map_pos(entity.tile_map().width(), entity.tile_map().height(), entity.tile_size, false);
+            entity.update();
+            break;
+        }
+    }
+}
+
+async fn run_pattern_viewer(entity: &WFCEntity)
+{
+    let mut pattern_viewer = PatternViewer::new(entity.tiles(), entity.patterns(), entity.tile_set());
+    loop 
+    {
+        clear_background(BLUE);
+        let wants_to_close = !pattern_viewer.update();
+        next_frame().await;
+        if wants_to_close {break;}
+    }
+}
+
+async fn try_run_wfc(tiles: &Vec<TileData>, model: &Array2D<Option<usize>>, error_tile: Option<usize>) -> bool
+{
+    let checked_model = 
+        if model.into_iter().any(|t| t.1.is_none()) 
+        {
+            None
+        }
+        else 
+        {
+            Some(Array2D::new(model.width(), model.height(), &|x, y| model.at(x, y).unwrap()))
+        };
+    
+    let Some(wfc_model) = checked_model else { return false; };
+
+    let mut output_width = 10;
+    let mut output_height = 10;
+    let mut wfc_entity = get_wfc_entity(tiles, &wfc_model, error_tile, output_width, output_height).await;
+
+    loop 
+    {
+        clear_background(BLUE);
+        let close = root_ui().button(None, "Close");
+
+        let mut was_size_changed = false;
+        was_size_changed |= intager_editor(&mut output_width, "Width:", &mut root_ui());
+        was_size_changed |= intager_editor(&mut output_height, "Height:", &mut root_ui());
+
+        if was_size_changed
+        {
+            wfc_entity = get_wfc_entity(tiles, &wfc_model, error_tile, output_width, output_height).await
+        }
+
+        if root_ui().button(None, "Display Patterns")
+        {
+            run_pattern_viewer(&wfc_entity).await;
+        }
+
+        if root_ui().button(None, "Run WFC")
+        {
+            wfc_entity.collapse_full();
+        }
+
+        wfc_entity.render();
+
+        next_frame().await;
+        if close
+        {
+            break true;
+        }
+    }
+}
+
+async fn main_loop(tiles: Vec<TileData>, mut entity: TileMapEntity, camera: Camera2D, error_tile: Option<usize>)
+{
+    let mut show_error_message = false;
+    loop {
+        if root_ui().button(None, "Load Map")
+        {
+            run_editor(&mut entity, camera).await;
+        }
+
+        if root_ui().button(None, "Run WFC")
+        {
+            let model = Array2D::new(entity.tile_map().width(), entity.tile_map().height(), &|x, y| 
+            {
+                entity.tile_map().at(x, y).data
+            });
+            let was_run = try_run_wfc(&tiles, &model, error_tile).await;
+            show_error_message = !was_run;
+        }
+
+        if show_error_message
+        {
+            root_ui().same_line(0.0);
+            root_ui().label(None, "All tiles must be filled in the model");
+        }
+
+        clear_background(BLUE);
+        entity.render_with_debug_lines();
+        next_frame().await
+    }
 }
 
 #[macroquad::main("BasicShapes")]
@@ -100,20 +211,9 @@ async fn main() {
     
     let tiles = get_tiles();
     
-    let mut model = Array2D::<Option<usize>>::new_default(13, 13);
-    *model.at_mut(6, 6) = Some(1);
-    let mut entity = get_model_entity(&tiles, &model).await;
+    let model = Array2D::<Option<usize>>::new_default(10, 10);
+    let entity = get_model_entity(&tiles, &model, false).await;
 
-    let mut editor = TileMapEditor::new(&mut entity, *camera, Some::<fn(&mut TileMapEntity)>(|map| {
-        let tile_size = get_map_tile_size(map.tile_map().width(), map.tile_map().height(), 0.7);
-        let map_pos = get_map_pos(map.tile_map().width(), map.tile_map().height(), tile_size);
-        map.pos = map_pos;
-        map.tile_size = tile_size;
-    }));
-
-    loop {
-        clear_background(BLUE);
-        editor.update();
-        next_frame().await
-    }
+    let error_tile_index = tiles.len() - 1;
+    main_loop(tiles, entity, *camera, Some(error_tile_index)).await;
 }

@@ -1,0 +1,431 @@
+{
+  "width": 8,
+  "height": 8,
+  "tiles": [
+    {
+      "name": "Grass",
+      "debug_name": "G",
+      "textures": [
+        {
+          "x": 3,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "name": "House",
+      "debug_name": "H",
+      "textures": [
+        {
+          "x": 3,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "name": "Trees",
+      "debug_name": "T",
+      "textures": [
+        {
+          "x": 2,
+          "y": 0
+        },
+        {
+          "x": 4,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "name": "Mountains",
+      "debug_name": "M",
+      "textures": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 5,
+          "y": 1
+        }
+      ]
+    },
+    {
+      "name": "Bushes",
+      "debug_name": "B",
+      "textures": [
+        {
+          "x": 3,
+          "y": 0
+        },
+        {
+          "x": 6,
+          "y": 3
+        }
+      ]
+    },
+    {
+      "name": "Bridge",
+      "debug_name": "Br",
+      "textures": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 2,
+          "y": 14
+        },
+        {
+          "x": 4,
+          "y": 34
+        }
+      ]
+    },
+    {
+      "name": "Unknown",
+      "debug_name": "",
+      "textures": [
+        {
+          "x": 0,
+          "y": 43
+        }
+      ]
+    }
+  ],
+  "map": {
+    "width": 8,
+    "height": 8,
+    "data": [
+      {
+        "x": 0,
+        "y": 0,
+        "data": null
+      },
+      {
+        "x": 1,
+        "y": 0,
+        "data": null
+      },
+      {
+        "x": 2,
+        "y": 0,
+        "data": null
+      },
+      {
+        "x": 3,
+        "y": 0,
+        "data": null
+      },
+      {
+        "x": 4,
+        "y": 0,
+        "data": null
+      },
+      {
+        "x": 5,
+        "y": 0,
+        "data": null
+      },
+      {
+        "x": 6,
+        "y": 0,
+        "data": null
+      },
+      {
+        "x": 7,
+        "y": 0,
+        "data": null
+      },
+      {
+        "x": 0,
+        "y": 1,
+        "data": null
+      },
+      {
+        "x": 1,
+        "y": 1,
+        "data": 0
+      },
+      {
+        "x": 2,
+        "y": 1,
+        "data": 0
+      },
+      {
+        "x": 3,
+        "y": 1,
+        "data": null
+      },
+      {
+        "x": 4,
+        "y": 1,
+        "data": null
+      },
+      {
+        "x": 5,
+        "y": 1,
+        "data": 0
+      },
+      {
+        "x": 6,
+        "y": 1,
+        "data": 0
+      },
+      {
+        "x": 7,
+        "y": 1,
+        "data": null
+      },
+      {
+        "x": 0,
+        "y": 2,
+        "data": null
+      },
+      {
+        "x": 1,
+        "y": 2,
+        "data": 0
+      },
+      {
+        "x": 2,
+        "y": 2,
+        "data": 0
+      },
+      {
+        "x": 3,
+        "y": 2,
+        "data": null
+      },
+      {
+        "x": 4,
+        "y": 2,
+        "data": null
+      },
+      {
+        "x": 5,
+        "y": 2,
+        "data": 0
+      },
+      {
+        "x": 6,
+        "y": 2,
+        "data": 0
+      },
+      {
+        "x": 7,
+        "y": 2,
+        "data": null
+      },
+      {
+        "x": 0,
+        "y": 3,
+        "data": null
+      },
+      {
+        "x": 1,
+        "y": 3,
+        "data": null
+      },
+      {
+        "x": 2,
+        "y": 3,
+        "data": null
+      },
+      {
+        "x": 3,
+        "y": 3,
+        "data": null
+      },
+      {
+        "x": 4,
+        "y": 3,
+        "data": null
+      },
+      {
+        "x": 5,
+        "y": 3,
+        "data": null
+      },
+      {
+        "x": 6,
+        "y": 3,
+        "data": null
+      },
+      {
+        "x": 7,
+        "y": 3,
+        "data": null
+      },
+      {
+        "x": 0,
+        "y": 4,
+        "data": 0
+      },
+      {
+        "x": 1,
+        "y": 4,
+        "data": null
+      },
+      {
+        "x": 2,
+        "y": 4,
+        "data": null
+      },
+      {
+        "x": 3,
+        "y": 4,
+        "data": null
+      },
+      {
+        "x": 4,
+        "y": 4,
+        "data": null
+      },
+      {
+        "x": 5,
+        "y": 4,
+        "data": null
+      },
+      {
+        "x": 6,
+        "y": 4,
+        "data": null
+      },
+      {
+        "x": 7,
+        "y": 4,
+        "data": 0
+      },
+      {
+        "x": 0,
+        "y": 5,
+        "data": null
+      },
+      {
+        "x": 1,
+        "y": 5,
+        "data": 0
+      },
+      {
+        "x": 2,
+        "y": 5,
+        "data": null
+      },
+      {
+        "x": 3,
+        "y": 5,
+        "data": null
+      },
+      {
+        "x": 4,
+        "y": 5,
+        "data": null
+      },
+      {
+        "x": 5,
+        "y": 5,
+        "data": null
+      },
+      {
+        "x": 6,
+        "y": 5,
+        "data": 0
+      },
+      {
+        "x": 7,
+        "y": 5,
+        "data": null
+      },
+      {
+        "x": 0,
+        "y": 6,
+        "data": null
+      },
+      {
+        "x": 1,
+        "y": 6,
+        "data": null
+      },
+      {
+        "x": 2,
+        "y": 6,
+        "data": 0
+      },
+      {
+        "x": 3,
+        "y": 6,
+        "data": 0
+      },
+      {
+        "x": 4,
+        "y": 6,
+        "data": 0
+      },
+      {
+        "x": 5,
+        "y": 6,
+        "data": 0
+      },
+      {
+        "x": 6,
+        "y": 6,
+        "data": null
+      },
+      {
+        "x": 7,
+        "y": 6,
+        "data": null
+      },
+      {
+        "x": 0,
+        "y": 7,
+        "data": null
+      },
+      {
+        "x": 1,
+        "y": 7,
+        "data": null
+      },
+      {
+        "x": 2,
+        "y": 7,
+        "data": null
+      },
+      {
+        "x": 3,
+        "y": 7,
+        "data": null
+      },
+      {
+        "x": 4,
+        "y": 7,
+        "data": null
+      },
+      {
+        "x": 5,
+        "y": 7,
+        "data": null
+      },
+      {
+        "x": 6,
+        "y": 7,
+        "data": null
+      },
+      {
+        "x": 7,
+        "y": 7,
+        "data": null
+      }
+    ]
+  },
+  "tile_set": {
+    "width": 7,
+    "height": 52,
+    "texture_path": "C:\\dev\\Rust\\wave_function_collapse\\resources\\medieval_pixel_art_tileset\\TileSet.png"
+  }
+}

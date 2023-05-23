@@ -1,6 +1,8 @@
 use crate::file_system;
 use crate::tile_map::*;
 use crate::tile_map_entity::*;
+use crate::gui::intager_editor::*;
+
 use macroquad::prelude::*;
 use macroquad::ui::*;
 use macroquad::ui::widgets::Window;
@@ -48,30 +50,23 @@ impl<'map, TFunc> TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut Ti
         }
     }
 
-    fn update_selected_tile(&mut self)
+    fn update_selected_tile(&mut self, ui: &mut Ui)
     {
         let options: Vec<_> = self.tile_options.iter().map(|t| t.as_str()).collect();
-        let selected_tile_option = root_ui().combo_box(0, "Tiles:", &options, None);
+        let selected_tile_option = ui.combo_box(0, "Tiles:", &options, None);
         self.current_tile = Some(selected_tile_option);
     }
 
-    fn update_modify_map(&mut self)
+    fn update_modify_map(&mut self, ui: &mut Ui)
     {
         let mouse_pos = mouse_position().into();
 
-        if !self.is_loading && !self.is_saving && !root_ui().is_mouse_over(mouse_pos)
+        if !self.is_loading && !self.is_saving && !ui.is_mouse_over(mouse_pos)
         {
             if is_mouse_button_down(MouseButton::Left)
             {
                 let mouse_world_pos = self.camera.screen_to_world(mouse_pos);
-                if self.entity.set_from_pos(mouse_world_pos, self.current_tile)
-                {
-                    println!("Modified map!");
-                }
-                else 
-                {
-                    println!("Failed to modify map :(");    
-                }
+                self.entity.set_from_pos(mouse_world_pos, self.current_tile);
             }
 
             if is_mouse_button_down(MouseButton::Right)
@@ -83,13 +78,13 @@ impl<'map, TFunc> TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut Ti
         
     }
 
-    fn update_map_size(&mut self) -> bool
+    fn update_map_size(&mut self, ui: &mut Ui) -> bool
     {
         let initial = (self.entity.tile_map().width(), self.entity.tile_map().height());
         let mut size = initial;
 
-        intager_editor(&mut size.1, "Vertical");
-        intager_editor(&mut size.0, "Horizontal");
+        intager_editor(&mut size.1, "Vertical", ui);
+        intager_editor(&mut size.0, "Horizontal", ui);
 
         if initial != size
         {
@@ -118,14 +113,9 @@ impl<'map, TFunc> TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut Ti
 
     fn update_save_map_ui(&mut self)
     {
-        if root_ui().button(None, "Save")
-        {
-            self.is_saving = true;
-        }
-
         if self.is_saving
         {
-            self.is_saving = Window::new(hash!(), vec2(0., 0.), vec2(screen_width() / 2., screen_height() / 2.))
+            let is_closeing = !Window::new(hash!(), vec2(0., 0.), vec2(screen_width() / 2., screen_height() / 2.))
                 .label("Save Map")
                 .close_button(true)
                 .ui(&mut root_ui(), |ui|
@@ -135,20 +125,17 @@ impl<'map, TFunc> TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut Ti
                         {
                             fs::create_dir_all(Path::new(SAVE_PATH)).expect("Failed to create directory");
                             let path = SAVE_PATH.to_owned() + "\\" + &self.map_name + "." + EXTENSION;
-                            file_system::serialize_to_file(&self.entity.tile_map(), path.as_str())
+                            file_system::serialize_to_file(&self.entity.tile_map(), path.as_str());
+                            self.is_saving = false;
                         }
-                    })
+                    });
+
+            if is_closeing {self.is_saving = false;}
         }
     }
 
     fn update_load_map_ui(&mut self) -> bool
     {
-        if root_ui().button(None, "Load")
-        {
-            self.loaded_maps = Some(get_saved_maps());
-            self.is_loading = true;
-        }
-
         if self.is_loading
         {
             let mut map_loaded = false;
@@ -185,25 +172,53 @@ impl<'map, TFunc> TileMapEditor<'map, TFunc> where TFunc : for<'a> Fn(&'a mut Ti
         false
     }
 
-    pub fn update(&mut self)
+    pub fn update(&mut self) -> bool
     {
-        self.update_modify_map();
-        self.update_selected_tile();
-        let size_changed = self.update_map_size();
-        self.update_save_map_ui();
-        let map_loaded = self.update_load_map_ui();
+        let mut size_changed = false;
+        let mut use_current_map = false;
 
-        if size_changed || map_loaded
-        {
-            if let Some(func) = &self.on_map_size_changed
+        Window::new(hash!(), vec2(0.0, 0.0), vec2(screen_width() / 4.0, screen_height()))
+            .label("Tile Map Editor")
+            .close_button(false)
+            .ui(&mut root_ui(), |ui| 
             {
-                func(self.entity);
-            }
-            self.entity.update();
-        }
+                self.update_modify_map(ui);
+                self.update_selected_tile(ui);
+                size_changed = self.update_map_size(ui);
+                if ui.button(None, "Save")
+                {
+                    self.is_saving = true;
+                }
+                
+                if ui.button(None, "Load")
+                {
+                    self.loaded_maps = Some(get_saved_maps());
+                    self.is_loading = true;
+                }
 
+                if ui.button(None, "Use Map")
+                {
+                    use_current_map = true;
+                }
+            });
+
+            self.update_save_map_ui();
+            let map_loaded = self.update_load_map_ui();
+
+            if size_changed || map_loaded
+            {
+                if let Some(func) = &self.on_map_size_changed
+                {
+                    func(self.entity);
+                }
+                self.entity.update();
+            }
+
+        
         self.entity.render();
         self.entity.render_debug_lines();
+
+        use_current_map
     }
 }
 
@@ -223,28 +238,4 @@ fn get_saved_maps() -> Vec<String>
     }
     
     map_files
-}
-
-fn intager_editor(value: &mut usize, label: &str)
-{
-    const SPACER: f32 = 3.0;
-    const PLUS: &str = "+";
-    const MINUS: &str = "-";
-
-    let text = format!("{}: {}", label, value);
-    let text_size = root_ui().calc_size(&text);
-    let plus_size = root_ui().calc_size(PLUS);
-
-    root_ui().label(None, &text);
-    root_ui().same_line(text_size.x + SPACER);
-    if root_ui().button(None, PLUS) && *value < usize::max_value()
-    {
-        *value += 1;
-    }
-
-    root_ui().same_line(text_size.x + SPACER + plus_size.x + SPACER);
-    if root_ui().button(None, MINUS) && *value > usize::min_value()
-    {
-        *value -= 1;
-    }
 }
